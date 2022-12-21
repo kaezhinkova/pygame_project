@@ -37,10 +37,10 @@ class Cat(pygame.sprite.Sprite):
         self.gravity_x = 2
 
     def check_fallen(self):  # кот коснулся предела окна
-        return self.player_x > WIDTH or self.player_x < 0 or self.player_y> HEIGHT - 40
+        return self.player_x > WIDTH or self.player_x < 0 or self.player_y > HEIGHT - 40
 
     def check_fall(self, rect_list):  # находится в падении
-        return rect_list[self.curr_block][1] + platform_length < self.player_y
+        return rect_list[self.curr_block][1] + platform_length < self.player_y + 20
 
     def current_block(self, rect_list):  # текущая платформа
         for i in range(len(rect_list)):
@@ -71,12 +71,12 @@ class Cat(pygame.sprite.Sprite):
                 self.player_x += self.gravity_x
             self.gravity_y -= 1
 
-
     def slip(self):
         self.player_y += 0.2
 
     def fall(self):
         self.player_y += 1
+        return True
 
 
 fps = 60
