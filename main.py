@@ -28,6 +28,7 @@ class Cat(pygame.sprite.Sprite):
         self.image_dead = dead
         self.dead = False
         self.jump = False
+        self.jump_counter = 0
         self.jump_1 = False
         self.jump_height = 100
         self.jump_width = 100
@@ -37,7 +38,7 @@ class Cat(pygame.sprite.Sprite):
         self.gravity_x = 2
 
     def check_fallen(self):  # кот коснулся предела окна
-        return self.player_x > WIDTH or self.player_x < 0 or self.player_y > HEIGHT - 40
+        return self.player_x > WIDTH or self.player_x < 0 or self.player_y + 40 > HEIGHT
 
     def check_fall(self, rect_list):  # находится в падении
         return rect_list[self.curr_block][1] + platform_length < self.player_y + 20 and \
@@ -81,10 +82,10 @@ class Cat(pygame.sprite.Sprite):
             self.gravity_y -= 1
 
     def slip(self):
-        self.player_y += 0.2
+        self.player_y += 0.3
 
     def fall(self):
-        self.player_y += 1
+        self.player_y += 1.1
         return True
 
 
@@ -137,10 +138,13 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            cat.gravity_y = 15
-            cat.gravity_x = 2
-            cat.jump = True
-            cat.jump_1 = True
+            if cat.jump:
+                cat.jump_counter += 1
+            else:
+                cat.gravity_y = 15
+                cat.gravity_x = 2
+                cat.jump_counter = 0
+                cat.jump_1 = True
 
     if cat.check_fall(blocks) and not cat.dead:
         cat.fall()
@@ -148,10 +152,12 @@ while running:
     elif cat.check_slip(blocks):
         cat.slip()
 
-    if cat.jump_1 and cat.jump and not cat.check_collisions(blocks) and not cat.check_fallen():
+    if cat.jump_1 and not cat.check_collisions(blocks) and not cat.check_fallen() and not cat.check_fall(blocks):
+        cat.jump = True
         cat.one_click()
     if cat.check_collisions(blocks):
         cat.jump = False
+        cat.jump_1 = False
 
     pygame.display.flip()
 pygame.quit()
