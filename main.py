@@ -36,13 +36,15 @@ class Cat(pygame.sprite.Sprite):
         self.direction = 'right'
         self.gravity_y = 15
         self.gravity_x = 2
+        self.check_2_jump = False
+        self.is_slip = False
 
     def check_fallen(self):  # кот коснулся предела окна
         return self.player_x > WIDTH or self.player_x < 0 or self.player_y + 40 > HEIGHT
 
     def check_fall(self, rect_list):  # находится в падении
         return rect_list[self.curr_block][1] + platform_length < self.player_y + 20 and \
-               (rect_list[self.curr_block][0] == self.player_x + 38 or rect_list[self.curr_block][
+               (rect_list[self.curr_block][0] == self.player_x + 40 or rect_list[self.curr_block][
                    0] == self.player_x - 10)
 
     def check_slip(self, rect_list):
@@ -61,18 +63,22 @@ class Cat(pygame.sprite.Sprite):
 
     def check_collisions(self, rect_list):
         for i in range(len(rect_list)):
-            if rect_list[i].colliderect([self.player_x, self.player_y, 40, 40]) and rect_list[self.curr_block][0] \
-                    < self.player_x and i != self.curr_block:
-                # platform left # под вопросм при возвращении
+            if rect_list[i].colliderect([self.player_x, self.player_y, 40, 40]) and rect_list[i][0] > WIDTH // 2 \
+                    and not self.is_slip:
                 self.curr_block = i
+                self.player_x = rect_list[i][0] - 40
                 return True
-            if rect_list[i].colliderect([self.player_x, self.player_y, 40, 40]) and rect_list[self.curr_block][
-                0] > self.player_x and i != self.curr_block:
+            if rect_list[i].colliderect([self.player_x, self.player_y, 40, 40]) and rect_list[i][0] < WIDTH // 2 \
+                    and not self.is_slip:
                 self.curr_block = i
                 self.player_x = rect_list[i][0] + 10
                 return True
 
     def one_click(self):
+        if cat.jump_counter == 1 and not self.check_2_jump:
+            cat.gravity_y = 15
+            self.gravity_x = -self.gravity_x
+            self.check_2_jump = True
         if cat.jump:
             self.player_y -= self.gravity_y
             if platforms[self.curr_block][0] > self.player_x:
@@ -96,7 +102,7 @@ timer = pygame.time.Clock()
 
 # game variables
 
-platforms = [[120, 460, platform_width, platform_length], [220, 410, platform_width, platform_length],
+platforms = [[120, 460, platform_width, platform_length], [220, 400, platform_width, platform_length],
              [120, 270, platform_width, platform_length], [220, 200, platform_width, platform_length]]
 
 v = 50
@@ -123,13 +129,15 @@ while running:
         cat.curr_block = cat.current_block(blocks)
         if cat.check_fall(blocks):
             screen.blit(cat.image, (cat.player_x, cat.player_y))
-        elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] < WIDTH // 2:
+        elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] < WIDTH // 2 and cat.player_x <= \
+                blocks[cat.curr_block][0] + 10:
             cat.player_x = blocks[cat.curr_block][0] + 10
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
-        elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] > WIDTH // 2:
+        elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] > WIDTH // 2 and \
+                blocks[cat.curr_block][0] - 40 <= cat.player_x <= blocks[cat.curr_block][0] + 10:  # вернуться, когда будет длинный прыжок
             cat.player_x = blocks[cat.curr_block][0] - 40
             screen.blit(cat.image_l, (cat.player_x, cat.player_y))
-        elif blocks[cat.curr_block][0] <= cat.player_x:
+        elif blocks[cat.curr_block][0] < WIDTH // 2:
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
         else:
             screen.blit(cat.image_l, (cat.player_x, cat.player_y))
@@ -138,26 +146,36 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if cat.jump:
-                cat.jump_counter += 1
+            if not cat.check_fall(blocks):
+                if cat.jump:
+                    cat.jump_counter += 1
+                else:
+                    cat.gravity_y = 15
+                    cat.gravity_x = 2
+                    cat.jump_counter = 0
+                    cat.jump_1 = True
+                    cat.check_2_jump = False
             else:
-                cat.gravity_y = 15
-                cat.gravity_x = 2
-                cat.jump_counter = 0
-                cat.jump_1 = True
+                cat.jump = False
+
+    if cat.check_collisions(blocks):
+        cat.jump = False
+        cat.jump_1 = False
+        cat.is_slip = True
+        cat.slip()
 
     if cat.check_fall(blocks) and not cat.dead:
         cat.fall()
         cat.jump = False
-    elif cat.check_slip(blocks):
+    if cat.check_slip(blocks):
+        cat.is_slip = True
         cat.slip()
+    else:
+        cat.is_slip = False
 
     if cat.jump_1 and not cat.check_collisions(blocks) and not cat.check_fallen() and not cat.check_fall(blocks):
         cat.jump = True
         cat.one_click()
-    if cat.check_collisions(blocks):
-        cat.jump = False
-        cat.jump_1 = False
 
     pygame.display.flip()
 pygame.quit()
