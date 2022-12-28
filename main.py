@@ -1,4 +1,5 @@
 import pygame
+import random
 
 pygame.init()
 
@@ -10,11 +11,28 @@ WIDTH = 400
 HEIGHT = 600
 platform_length = 130
 platform_width = 10
+# all_platforms = pygame.sprite.Group()
 background = white
 player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
 player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
 player_l = pygame.transform.flip(player_r, True, False)
 dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
+
+'''
+class Block(pygame.sprite.Sprite):
+    image = pygame.transform.scale(pygame.image.load('block.png'), (10, 130))
+
+    def __init__(self, group):
+        super().__init__(group)
+        self.image = Block.image
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(110, 150)
+        self.rect.y = random.randint(10, 100)
+
+    def update_platforms(self, my_list, y_pos, change):
+        pass
+
+'''
 
 
 class Cat(pygame.sprite.Sprite):
@@ -103,9 +121,29 @@ timer = pygame.time.Clock()
 # game variables
 
 platforms = [[120, 460, platform_width, platform_length], [220, 400, platform_width, platform_length],
-             [120, 270, platform_width, platform_length], [220, 200, platform_width, platform_length]]
+             [120, 270, platform_width, platform_length], [220, 200, platform_width, platform_length],
+             [130, 70, platform_width, platform_length], [210, 20, platform_width, platform_length]]
 
 v = 50
+t = 1
+
+'''
+def update_platforms(my_list):
+    global t
+    if cat.player_y < 300:
+        for i in range(len(my_list)):
+            my_list[i][1] -= cat.gravity_y
+    else:
+        pass
+    for item in range(len(my_list)):
+        if my_list[item][1] > 600:
+            if 3 - t == 2:
+                my_list[item] = [random.randint(110, 150), random.randint(-50, -10), 10, 130]
+            else:
+                my_list[item] = [random.randint(210, 250), random.randint(-50, -10), 10, 130]
+            t = 3 - t
+        return my_list
+'''
 
 # create screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -129,12 +167,12 @@ while running:
         cat.curr_block = cat.current_block(blocks)
         if cat.check_fall(blocks):
             screen.blit(cat.image, (cat.player_x, cat.player_y))
-        elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] < WIDTH // 2 and cat.player_x <= \
-                blocks[cat.curr_block][0] + 10:
+        elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] < WIDTH // 2 and cat.player_x + 20 < \
+                blocks[cat.curr_block][0]:
             cat.player_x = blocks[cat.curr_block][0] + 10
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
         elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] > WIDTH // 2 and \
-                blocks[cat.curr_block][0] - 40 <= cat.player_x <= blocks[cat.curr_block][0] + 10:  # вернуться, когда будет длинный прыжок
+                cat.player_x - 20 > blocks[cat.curr_block][0] + 10:  # вернуться, когда будет длинный прыжок
             cat.player_x = blocks[cat.curr_block][0] - 40
             screen.blit(cat.image_l, (cat.player_x, cat.player_y))
         elif blocks[cat.curr_block][0] < WIDTH // 2:
@@ -176,6 +214,8 @@ while running:
     if cat.jump_1 and not cat.check_collisions(blocks) and not cat.check_fallen() and not cat.check_fall(blocks):
         cat.jump = True
         cat.one_click()
+
+    # platforms = update_platforms(platforms)
 
     pygame.display.flip()
 pygame.quit()
