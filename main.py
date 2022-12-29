@@ -10,6 +10,7 @@ gray = (120, 120, 120)
 WIDTH = 400
 HEIGHT = 600
 platform_length = 130
+long_platform_length = 200
 platform_width = 10
 all_platforms = pygame.sprite.Group()
 background = white
@@ -24,21 +25,43 @@ last_block = 0
 class Block(pygame.sprite.Sprite):
     image = pygame.transform.scale(pygame.image.load('block.png'), (10, 130))
     image2 = pygame.transform.flip(image, True, False)
+    long_image = pygame.transform.scale(pygame.image.load('long_platform.png'), (10, 200))
+    long_image2 = pygame.transform.flip(long_image, True, False)
 
     def __init__(self, group):
         global last_block
         super().__init__(group)
-        self.rect = self.image.get_rect()
         if last_block:
             if 110 <= last_block.rect.x <= 150:
-                self.image = Block.image2
+                a = random.randint(1, 2)
+                if a == 1:
+                    b = random.randrange(60, 71, 10)
+                    self.image = Block.image2
+                    self.block_length = platform_length
+                    self.rect = self.image.get_rect()
+                else:
+                    b = random.randrange(100, 121, 10)
+                    self.image = Block.long_image2
+                    self.block_length = long_platform_length
+                    self.rect = self.long_image.get_rect()
                 self.rect.x = 230
-                a = random.randrange(60, 71, 10)
-                self.rect.y = last_block.rect.y - a
+                self.rect.y = last_block.rect.y - b
             else:
-                self.image = Block.image
+                a = random.randint(1, 2)
+                if a == 1:
+                    self.image = Block.image
+                    self.block_length = platform_length
+                    b = random.randrange(130, 171, 10)
+                    self.rect = self.image.get_rect()
+                else:
+                    self.image = Block.long_image
+                    self.block_length = long_platform_length
+                    b = random.randrange(200, 221, 10)
+                    self.rect = self.long_image.get_rect()
                 self.rect.x = 120
-                self.rect.y = last_block.rect.y - 130
+                self.rect.y = last_block.rect.y - b
+        else:
+            self.block_length = platform_length
         self.curr = False
         self.start = False
         last_block = self
@@ -69,6 +92,7 @@ class Cat(pygame.sprite.Sprite):
         self.jump = False
         self.jump_counter = 0
         self.jump_1 = False
+        self.jump_2 = False
         self.jump_height = 100
         self.jump_width = 100
         self.curr_block = self.current_block()  # спрайт текущего блока
@@ -82,7 +106,7 @@ class Cat(pygame.sprite.Sprite):
         return self.player_x > WIDTH or self.player_x < 0 or self.player_y + 40 > HEIGHT
 
     def check_fall(self):  # находится в падении
-        return self.curr_block.rect[1] + platform_length < self.player_y + 20 and \
+        return self.curr_block.rect[1] + self.curr_block.block_length < self.player_y + 20 and \
                (self.curr_block.rect[0] == self.player_x + 40 or self.curr_block.rect[0] == self.player_x - 10)
 
     def check_slip(self):
@@ -90,7 +114,6 @@ class Cat(pygame.sprite.Sprite):
                 self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
                                                   40]) and not self.curr_block.start:
             # где не равен нулю сделать спец блоки для начала уровня
-
             return True
         return False
 
@@ -117,11 +140,24 @@ class Cat(pygame.sprite.Sprite):
                 return True
 
     def one_click(self):
-        if cat.jump_counter == 1 and not self.check_2_jump:
-            cat.gravity_y = 10
+        if self.jump_counter == 1 and not self.check_2_jump:
+            self.gravity_y = 10
             self.gravity_x = -self.gravity_x
             self.check_2_jump = True
-        if cat.jump:
+        if self.jump:
+            self.player_y -= self.gravity_y
+            if self.curr_block.rect[0] > self.player_x:
+                self.player_x -= self.gravity_x
+            else:
+                self.player_x += self.gravity_x
+            self.gravity_y -= 1
+
+    def two_click(self):
+        if self.jump_counter == 1 and not self.check_2_jump:
+            self.gravity_y = 15
+            self.gravity_x = -self.gravity_x
+            self.check_2_jump = True
+        if self.jump:
             self.player_y -= self.gravity_y
             if self.curr_block.rect[0] > self.player_x:
                 self.player_x -= self.gravity_x
@@ -192,14 +228,15 @@ while running:
         cat.curr_block = cat.current_block()
         if cat.check_fall():
             screen.blit(cat.image, (cat.player_x, cat.player_y))
-        elif cat.curr_block.rect[1] > cat.player_y and cat.curr_block.rect[0] < WIDTH // 2 and cat.player_x + 20 \
-                < cat.curr_block.rect[0]:
-            cat.player_x = cat.curr_block.rect[0] + 10
-            screen.blit(cat.image_r, (cat.player_x, cat.player_y))
-        elif cat.curr_block.rect[1] > cat.player_y and cat.curr_block.rect[0] > WIDTH // 2 and \
-                cat.player_x - 20 > cat.curr_block.rect[0] + 10:  # вернуться, когда будет длинный прыжок
-            cat.player_x = cat.curr_block.rect[0] - 40
-            screen.blit(cat.image_l, (cat.player_x, cat.player_y))
+        # elif cat.curr_block.rect[1] > cat.player_y and cat.curr_block.rect[0] < WIDTH // 2 and cat.player_x + 20 \
+        #         < cat.curr_block.rect[0]:
+        #     print(6)
+        #     cat.player_x = cat.curr_block.rect[0] + 10
+        #     screen.blit(cat.image_r, (cat.player_x, cat.player_y))
+        # elif cat.curr_block.rect[1] > cat.player_y and cat.curr_block.rect[0] > WIDTH // 2 and \
+        #         cat.player_x - 20 > cat.curr_block.rect[0] + 10:  # вернуться, когда будет длинный прыжок
+        #     cat.player_x = cat.curr_block.rect[0] - 40
+        #     screen.blit(cat.image_l, (cat.player_x, cat.player_y))
         elif cat.curr_block.rect[0] < WIDTH // 2:
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
         else:
@@ -208,22 +245,40 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            cat.jump_2 = False
             if not cat.check_fall():
+                cat.jump_1 = True
                 if cat.jump:
                     cat.jump_counter += 1
                 else:
                     cat.gravity_y = 10
                     cat.gravity_x = 2
                     cat.jump_counter = 0
-                    cat.jump_1 = True
                     cat.check_2_jump = False
             else:
                 cat.jump = False
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # правая кнопка мыши
+            cat.jump_1 = False
+            if not cat.check_fall():
+                cat.jump_2 = True
+                if cat.jump:
+                    cat.jump_counter += 1
+                else:
+                    cat.gravity_y = 15
+                    cat.gravity_x = 3
+                    cat.jump_counter = 0
+                    cat.check_2_jump = False
+            else:
+                cat.jump = False
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 3 and cat.jump:
+            cat.jump_2 = True
+            cat.gravity_y = 0
 
     if cat.check_collisions():
         cat.jump = False
         cat.jump_1 = False
+        cat.jump_2 = False
         cat.is_slip = True
         cat.slip()
 
@@ -238,8 +293,10 @@ while running:
 
     if cat.jump_1 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall():
         cat.jump = True
-        # print(cat.gravity_y) изменить прыжок
         cat.one_click()
+    elif cat.jump_2 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall():
+        cat.jump = True
+        cat.two_click()
 
     update_platforms()
 
