@@ -11,28 +11,49 @@ WIDTH = 400
 HEIGHT = 600
 platform_length = 130
 platform_width = 10
-# all_platforms = pygame.sprite.Group()
+all_platforms = pygame.sprite.Group()
 background = white
 player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
 player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
 player_l = pygame.transform.flip(player_r, True, False)
 dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
 
-'''
+last_block = 0
+
+
 class Block(pygame.sprite.Sprite):
     image = pygame.transform.scale(pygame.image.load('block.png'), (10, 130))
+    image2 = pygame.transform.flip(image, True, False)
 
     def __init__(self, group):
+        global last_block
         super().__init__(group)
-        self.image = Block.image
         self.rect = self.image.get_rect()
-        self.rect.x = random.randint(110, 150)
-        self.rect.y = random.randint(10, 100)
+        if last_block:
+            if 110 <= last_block.rect.x <= 150:
+                self.image = Block.image2
+                self.rect.x = 230
+                a = random.randrange(60, 71, 10)
+                self.rect.y = last_block.rect.y - a
+            else:
+                self.image = Block.image
+                self.rect.x = 120
+                self.rect.y = last_block.rect.y - 130
+        self.curr = False
+        self.start = False
+        last_block = self
 
     def update_platforms(self, my_list, y_pos, change):
         pass
 
-'''
+    '''
+    def check_col(self):
+        if pygame.sprite.spritecollideany(self, not_all_sprites):
+            return True
+        else:
+            not_all_sprites.add(self)
+        return False
+    '''
 
 
 class Cat(pygame.sprite.Sprite):
@@ -50,7 +71,7 @@ class Cat(pygame.sprite.Sprite):
         self.jump_1 = False
         self.jump_height = 100
         self.jump_width = 100
-        self.curr_block = 0
+        self.curr_block = self.current_block()  # спрайт текущего блока
         self.direction = 'right'
         self.gravity_y = 15
         self.gravity_x = 2
@@ -60,46 +81,49 @@ class Cat(pygame.sprite.Sprite):
     def check_fallen(self):  # кот коснулся предела окна
         return self.player_x > WIDTH or self.player_x < 0 or self.player_y + 40 > HEIGHT
 
-    def check_fall(self, rect_list):  # находится в падении
-        return rect_list[self.curr_block][1] + platform_length < self.player_y + 20 and \
-               (rect_list[self.curr_block][0] == self.player_x + 40 or rect_list[self.curr_block][
-                   0] == self.player_x - 10)
+    def check_fall(self):  # находится в падении
+        return self.curr_block.rect[1] + platform_length < self.player_y + 20 and \
+               (self.curr_block.rect[0] == self.player_x + 40 or self.curr_block.rect[0] == self.player_x - 10)
 
-    def check_slip(self, rect_list):
-        if rect_list[self.curr_block].colliderect([self.player_x + 10, self.player_y, 40, 40]) or \
-                rect_list[self.curr_block].colliderect([self.player_x - 10, self.player_y, 40,
-                                                        40]) and self.curr_block != 0:  # где не равен нулю сделать спец блоки для начала уровня
+    def check_slip(self):
+        if self.curr_block.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]) or \
+                self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
+                                                  40]) and not self.curr_block.start:
+            # где не равен нулю сделать спец блоки для начала уровня
+
             return True
         return False
 
-    def current_block(self, rect_list):  # текущая платформа
-        for i in range(len(rect_list)):
-            if rect_list[i].colliderect([self.player_x + 10, self.player_y, 40, 40]):
-                return i
-            if rect_list[i].colliderect([self.player_x - 10, self.player_y, 40, 40]):
-                return i
+    def current_block(self):  # текущая платформа
+        for el in all_platforms:
+            if el.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]):
+                return el
+            if el.rect.colliderect([self.player_x - 10, self.player_y, 40, 40]):
+                return el
 
-    def check_collisions(self, rect_list):
-        for i in range(len(rect_list)):
-            if rect_list[i].colliderect([self.player_x, self.player_y, 40, 40]) and rect_list[i][0] > WIDTH // 2 \
+    def check_collisions(self):
+        for el in all_platforms:
+            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.rect.x > WIDTH // 2 \
                     and not self.is_slip:
-                self.curr_block = i
-                self.player_x = rect_list[i][0] - 40
+                el.curr = True
+                self.curr_block = el
+                self.player_x = el.rect.x - 40
                 return True
-            if rect_list[i].colliderect([self.player_x, self.player_y, 40, 40]) and rect_list[i][0] < WIDTH // 2 \
+            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.rect.x < WIDTH // 2 \
                     and not self.is_slip:
-                self.curr_block = i
-                self.player_x = rect_list[i][0] + 10
+                el.curr = True
+                self.curr_block = el
+                self.player_x = el.rect.x + 10
                 return True
 
     def one_click(self):
         if cat.jump_counter == 1 and not self.check_2_jump:
-            cat.gravity_y = 15
+            cat.gravity_y = 10
             self.gravity_x = -self.gravity_x
             self.check_2_jump = True
         if cat.jump:
             self.player_y -= self.gravity_y
-            if platforms[self.curr_block][0] > self.player_x:
+            if self.curr_block.rect[0] > self.player_x:
                 self.player_x -= self.gravity_x
             else:
                 self.player_x += self.gravity_x
@@ -127,55 +151,56 @@ platforms = [[120, 460, platform_width, platform_length], [220, 400, platform_wi
 v = 50
 t = 1
 
-'''
-def update_platforms(my_list):
+
+def update_platforms():
     global t
-    if cat.player_y < 300:
-        for i in range(len(my_list)):
-            my_list[i][1] -= cat.gravity_y
+    if cat.player_y < 400 and cat.gravity_y > 0 and cat.jump:
+        for el in all_platforms:
+            el.rect.y += cat.gravity_y
     else:
         pass
-    for item in range(len(my_list)):
-        if my_list[item][1] > 600:
-            if 3 - t == 2:
-                my_list[item] = [random.randint(110, 150), random.randint(-50, -10), 10, 130]
-            else:
-                my_list[item] = [random.randint(210, 250), random.randint(-50, -10), 10, 130]
-            t = 3 - t
-        return my_list
-'''
+    for el in all_platforms:
+        if el.rect.y + platform_length > 600:
+            Block(all_platforms)
+
 
 # create screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('cat jump')
 cat = Cat()
 running = True
+first_block = Block(all_platforms)
+first_block.rect = pygame.Rect(120, 460, platform_width, platform_length)
+first_block.rect.x = 120
+first_block.rect.y = 460
+last_block = first_block
+first_block.start = True
+for i in range(5):
+    Block(all_platforms)
+level_platforms = len(all_platforms)
 while running:
     timer.tick(fps)
     screen.fill(background)
-    blocks = []
-    for i in range(len(platforms)):
-        block = pygame.draw.rect(screen, black, platforms[i], 0, 2)
-        blocks.append(block)
+    all_platforms.draw(screen)
     if cat.check_fallen():
         cat.jump = False
         cat.dead = True
         screen.blit(cat.image_dead, (cat.player_x, cat.player_y))
-    elif cat.jump or cat.current_block(blocks) is None:
+    elif cat.jump or cat.current_block() is None:
         screen.blit(cat.image, (cat.player_x, cat.player_y))
     else:
-        cat.curr_block = cat.current_block(blocks)
-        if cat.check_fall(blocks):
+        cat.curr_block = cat.current_block()
+        if cat.check_fall():
             screen.blit(cat.image, (cat.player_x, cat.player_y))
-        elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] < WIDTH // 2 and cat.player_x + 20 < \
-                blocks[cat.curr_block][0]:
-            cat.player_x = blocks[cat.curr_block][0] + 10
+        elif cat.curr_block.rect[1] > cat.player_y and cat.curr_block.rect[0] < WIDTH // 2 and cat.player_x + 20 \
+                < cat.curr_block.rect[0]:
+            cat.player_x = cat.curr_block.rect[0] + 10
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
-        elif blocks[cat.curr_block][1] > cat.player_y and blocks[cat.curr_block][0] > WIDTH // 2 and \
-                cat.player_x - 20 > blocks[cat.curr_block][0] + 10:  # вернуться, когда будет длинный прыжок
-            cat.player_x = blocks[cat.curr_block][0] - 40
+        elif cat.curr_block.rect[1] > cat.player_y and cat.curr_block.rect[0] > WIDTH // 2 and \
+                cat.player_x - 20 > cat.curr_block.rect[0] + 10:  # вернуться, когда будет длинный прыжок
+            cat.player_x = cat.curr_block.rect[0] - 40
             screen.blit(cat.image_l, (cat.player_x, cat.player_y))
-        elif blocks[cat.curr_block][0] < WIDTH // 2:
+        elif cat.curr_block.rect[0] < WIDTH // 2:
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
         else:
             screen.blit(cat.image_l, (cat.player_x, cat.player_y))
@@ -184,11 +209,11 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if not cat.check_fall(blocks):
+            if not cat.check_fall():
                 if cat.jump:
                     cat.jump_counter += 1
                 else:
-                    cat.gravity_y = 15
+                    cat.gravity_y = 10
                     cat.gravity_x = 2
                     cat.jump_counter = 0
                     cat.jump_1 = True
@@ -196,26 +221,27 @@ while running:
             else:
                 cat.jump = False
 
-    if cat.check_collisions(blocks):
+    if cat.check_collisions():
         cat.jump = False
         cat.jump_1 = False
         cat.is_slip = True
         cat.slip()
 
-    if cat.check_fall(blocks) and not cat.dead:
+    if cat.check_fall() and not cat.dead:
         cat.fall()
         cat.jump = False
-    if cat.check_slip(blocks):
+    if cat.check_slip() and not cat.dead:
         cat.is_slip = True
         cat.slip()
     else:
         cat.is_slip = False
 
-    if cat.jump_1 and not cat.check_collisions(blocks) and not cat.check_fallen() and not cat.check_fall(blocks):
+    if cat.jump_1 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall():
         cat.jump = True
+        # print(cat.gravity_y) изменить прыжок
         cat.one_click()
 
-    # platforms = update_platforms(platforms)
+    update_platforms()
 
     pygame.display.flip()
 pygame.quit()
