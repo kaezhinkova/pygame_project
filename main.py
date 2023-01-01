@@ -13,6 +13,7 @@ platform_length = 130
 long_platform_length = 200
 platform_width = 10
 all_platforms = pygame.sprite.Group()
+count_platforms = 0
 background = white
 player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
 player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
@@ -27,9 +28,11 @@ class Block(pygame.sprite.Sprite):
     image2 = pygame.transform.flip(image, True, False)
     long_image = pygame.transform.scale(pygame.image.load('long_platform.png'), (10, 200))
     long_image2 = pygame.transform.flip(long_image, True, False)
+    start_image = pygame.transform.scale(pygame.image.load('start.block.png'), (10, 130))
 
     def __init__(self, group):
         global last_block
+        global count_platforms
         super().__init__(group)
         if last_block:
             if last_block.rect.x < WIDTH // 2:
@@ -62,9 +65,18 @@ class Block(pygame.sprite.Sprite):
                 self.rect.y = last_block.rect.y - b
         else:
             self.block_length = platform_length
-        self.curr = False
         self.start = False
+        if count_platforms >= 21:
+            count_platforms = 1
+            self.image = Block.start_image
+            self.block_length = platform_length
+            self.rect = self.image.get_rect()
+            self.rect.x = 190
+            self.rect.y = last_block.rect.y - 200
+            self.start = True
         last_block = self
+        self.replace = False
+        self.curr = False
 
     def update_platforms(self, my_list, y_pos, change):
         pass
@@ -168,6 +180,24 @@ class Cat(pygame.sprite.Sprite):
         self.player_y += 1.1
         return True
 
+    def update_platforms(self):
+        global count_platforms
+        if self.player_y < 400 and self.gravity_y > 0 and self.jump:
+            for el in all_platforms:
+                el.rect.y += self.gravity_y * 1.2
+        else:
+            pass
+        for el in all_platforms:
+            if el.rect.y + platform_length > 600 and not el.replace:
+                Block(all_platforms)
+                count_platforms += 1
+                el.replace = True
+
+    def clear_platforms(self):
+        for el in all_platforms:
+            if el.rect.x >= 500 or el.rect.x < 0 or el.rect.y >= 600:
+                all_platforms.remove(el)
+
 
 fps = 60
 flip = False
@@ -184,18 +214,6 @@ v = 50
 t = 1
 
 
-def update_platforms():
-    global t
-    if cat.player_y < 400 and cat.gravity_y > 0 and cat.jump:
-        for el in all_platforms:
-            el.rect.y += cat.gravity_y
-    else:
-        pass
-    for el in all_platforms:
-        if el.rect.y + platform_length > 600:
-            Block(all_platforms)
-
-
 # create screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('cat jump')
@@ -209,7 +227,7 @@ last_block = first_block
 first_block.start = True
 for i in range(5):
     Block(all_platforms)
-level_platforms = len(all_platforms)
+count_platforms += 6
 while running:
     timer.tick(fps)
     screen.fill(background)
@@ -279,7 +297,6 @@ while running:
         cat.jump_1 = False
         cat.jump_2 = False
         cat.is_slip = True
-        cat.slip()
 
     if cat.check_fall() and not cat.dead:
         cat.fall()
@@ -297,7 +314,8 @@ while running:
         cat.jump = True
         cat.two_click()
 
-    update_platforms()
+    cat.update_platforms()
+    cat.clear_platforms()
 
     pygame.display.flip()
 pygame.quit()
