@@ -7,7 +7,7 @@ pygame.init()
 white = (255, 255, 255)
 black = (0, 0, 0)
 gray = (120, 120, 120)
-WIDTH = 400
+WIDTH = 500
 HEIGHT = 600
 platform_length = 130
 long_platform_length = 200
@@ -32,10 +32,10 @@ class Block(pygame.sprite.Sprite):
         global last_block
         super().__init__(group)
         if last_block:
-            if 110 <= last_block.rect.x <= 150:
+            if last_block.rect.x < WIDTH // 2:
                 a = random.randint(1, 2)
                 if a == 1:
-                    b = random.randrange(60, 71, 10)
+                    b = random.randrange(90, 91, 10)
                     self.image = Block.image2
                     self.block_length = platform_length
                     self.rect = self.image.get_rect()
@@ -44,7 +44,7 @@ class Block(pygame.sprite.Sprite):
                     self.image = Block.long_image2
                     self.block_length = long_platform_length
                     self.rect = self.long_image.get_rect()
-                self.rect.x = 230
+                self.rect.x = 310
                 self.rect.y = last_block.rect.y - b
             else:
                 a = random.randint(1, 2)
@@ -58,7 +58,7 @@ class Block(pygame.sprite.Sprite):
                     self.block_length = long_platform_length
                     b = random.randrange(200, 221, 10)
                     self.rect = self.long_image.get_rect()
-                self.rect.x = 120
+                self.rect.x = 190
                 self.rect.y = last_block.rect.y - b
         else:
             self.block_length = platform_length
@@ -85,7 +85,7 @@ class Cat(pygame.sprite.Sprite):
         self.image = player
         self.image_r = player_r
         self.image_l = player_l
-        self.player_x = 130
+        self.player_x = 200
         self.player_y = 500
         self.image_dead = dead
         self.dead = False
@@ -96,7 +96,7 @@ class Cat(pygame.sprite.Sprite):
         self.jump_height = 100
         self.jump_width = 100
         self.curr_block = self.current_block()  # спрайт текущего блока
-        self.direction = 'right'
+        self.direction = 2  # left
         self.gravity_y = 15
         self.gravity_x = 2
         self.check_2_jump = False
@@ -112,7 +112,7 @@ class Cat(pygame.sprite.Sprite):
     def check_slip(self):
         if self.curr_block.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]) or \
                 self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
-                                                  40]) and not self.curr_block.start:
+                                                  40]) and not self.curr_block.start and not self.jump:
             # где не равен нулю сделать спец блоки для начала уровня
             return True
         return False
@@ -126,17 +126,13 @@ class Cat(pygame.sprite.Sprite):
 
     def check_collisions(self):
         for el in all_platforms:
-            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.rect.x > WIDTH // 2 \
-                    and not self.is_slip:
+            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]):
                 el.curr = True
                 self.curr_block = el
-                self.player_x = el.rect.x - 40
-                return True
-            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.rect.x < WIDTH // 2 \
-                    and not self.is_slip:
-                el.curr = True
-                self.curr_block = el
-                self.player_x = el.rect.x + 10
+                if el.rect.x < self.player_x + 10:
+                    self.player_x = el.rect.x + 10
+                else:
+                    self.player_x = el.rect.x - 40
                 return True
 
     def one_click(self):
@@ -206,8 +202,8 @@ pygame.display.set_caption('cat jump')
 cat = Cat()
 running = True
 first_block = Block(all_platforms)
-first_block.rect = pygame.Rect(120, 460, platform_width, platform_length)
-first_block.rect.x = 120
+first_block.rect = pygame.Rect(190, 460, platform_width, platform_length)
+first_block.rect.x = 190
 first_block.rect.y = 460
 last_block = first_block
 first_block.start = True
@@ -237,7 +233,7 @@ while running:
         #         cat.player_x - 20 > cat.curr_block.rect[0] + 10:  # вернуться, когда будет длинный прыжок
         #     cat.player_x = cat.curr_block.rect[0] - 40
         #     screen.blit(cat.image_l, (cat.player_x, cat.player_y))
-        elif cat.curr_block.rect[0] < WIDTH // 2:
+        elif cat.curr_block.rect.x < cat.player_x:
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
         else:
             screen.blit(cat.image_l, (cat.player_x, cat.player_y))
@@ -245,6 +241,9 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            cat.direction = 3 - cat.direction
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             cat.jump_2 = False
             if not cat.check_fall():
