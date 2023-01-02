@@ -9,11 +9,16 @@ black = (0, 0, 0)
 gray = (120, 120, 120)
 WIDTH = 500
 HEIGHT = 600
+axis = WIDTH // 2  # разница между блоками 120
+
+MYEVENTTYPE = pygame.USEREVENT + 1
+pygame.time.set_timer(MYEVENTTYPE, 1000)
 platform_length = 130
 long_platform_length = 200
 platform_width = 10
 all_platforms = pygame.sprite.Group()
 count_platforms = 0
+
 background = white
 player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
 player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
@@ -33,35 +38,50 @@ class Block(pygame.sprite.Sprite):
     def __init__(self, group):
         global last_block
         global count_platforms
+        global axis
         super().__init__(group)
+        if count_platforms == 8 and last_block.rect.x < axis and axis == 250:  # сдвиг влево
+            axis = 190
+        elif count_platforms == 8 and last_block.rect.x > axis and axis == 250:
+            axis = 310
+        elif count_platforms == 14:
+            axis = 250
+        b = 0
+        if count_platforms == 9:
+            b = 220
         if last_block:
-            if last_block.rect.x < WIDTH // 2:
+            if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
+                    last_block.rect.x <= axis and axis == 310):
                 a = random.randint(1, 2)
                 if a == 1:
-                    b = random.randrange(90, 91, 10)
                     self.image = Block.image2
                     self.block_length = platform_length
                     self.rect = self.image.get_rect()
+                    if not b:
+                        b = random.randrange(90, 131)
                 else:
-                    b = random.randrange(100, 121, 10)
                     self.image = Block.long_image2
                     self.block_length = long_platform_length
                     self.rect = self.long_image.get_rect()
-                self.rect.x = 310
+                    if not b:
+                        b = random.randrange(160, 201)
+                self.rect.x = axis + 60
                 self.rect.y = last_block.rect.y - b
             else:
                 a = random.randint(1, 2)
                 if a == 1:
                     self.image = Block.image
                     self.block_length = platform_length
-                    b = random.randrange(130, 171, 10)
                     self.rect = self.image.get_rect()
+                    if not b:
+                        b = random.randrange(90, 131)
                 else:
                     self.image = Block.long_image
                     self.block_length = long_platform_length
-                    b = random.randrange(200, 221, 10)
                     self.rect = self.long_image.get_rect()
-                self.rect.x = 190
+                    if not b:
+                        b = random.randrange(160, 201)
+                self.rect.x = axis - 60
                 self.rect.y = last_block.rect.y - b
         else:
             self.block_length = platform_length
@@ -77,9 +97,9 @@ class Block(pygame.sprite.Sprite):
         last_block = self
         self.replace = False
         self.curr = False
-
-    def update_platforms(self, my_list, y_pos, change):
-        pass
+        self.turn = False
+        if count_platforms == 7 or count_platforms == 13:
+            self.turn = True
 
     '''
     def check_col(self):
@@ -162,7 +182,7 @@ class Cat(pygame.sprite.Sprite):
 
     def two_click(self):
         if self.jump_counter == 1 and not self.check_2_jump:
-            self.gravity_y = 15
+            self.gravity_y = 13
             self.gravity_x = -self.gravity_x
             self.check_2_jump = True
         if self.jump:
@@ -177,25 +197,35 @@ class Cat(pygame.sprite.Sprite):
         self.player_y += 0.3
 
     def fall(self):
-        self.player_y += 1.1
+        self.player_y += 1.5
         return True
 
     def update_platforms(self):
         global count_platforms
-        if self.player_y < 400 and self.gravity_y > 0 and self.jump:
+        if self.player_y < 480 and self.gravity_y > 0 and self.jump:
             for el in all_platforms:
                 el.rect.y += self.gravity_y * 1.2
         else:
             pass
         for el in all_platforms:
-            if el.rect.y + platform_length > 600 and not el.replace:
+            if el.rect.y + platform_length > HEIGHT and not el.replace:
                 Block(all_platforms)
                 count_platforms += 1
                 el.replace = True
 
+    def update_turn(self):
+        for el in all_platforms:
+            if el.turn:
+                el.image = pygame.transform.flip(el.image, True, False)
+                if self.curr_block.turn and self.is_slip:
+                    if self.player_x < el.rect.x:
+                        self.player_x = el.rect.x + platform_width
+                    else:
+                        self.player_x = el.rect.x - 40
+
     def clear_platforms(self):
         for el in all_platforms:
-            if el.rect.x >= 500 or el.rect.x < 0 or el.rect.y >= 600:
+            if el.rect.x >= WIDTH or el.rect.x < 0 or el.rect.y >= HEIGHT:
                 all_platforms.remove(el)
 
 
@@ -212,7 +242,6 @@ platforms = [[120, 460, platform_width, platform_length], [220, 400, platform_wi
 
 v = 50
 t = 1
-
 
 # create screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -259,7 +288,8 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
+        if event.type == MYEVENTTYPE:
+            cat.update_turn()
         if event.type == pygame.MOUSEBUTTONDOWN:
             cat.direction = 3 - cat.direction
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -282,7 +312,7 @@ while running:
                 if cat.jump:
                     cat.jump_counter += 1
                 else:
-                    cat.gravity_y = 15
+                    cat.gravity_y = 13
                     cat.gravity_x = 3
                     cat.jump_counter = 0
                     cat.check_2_jump = False
@@ -313,6 +343,7 @@ while running:
     elif cat.jump_2 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall():
         cat.jump = True
         cat.two_click()
+
 
     cat.update_platforms()
     cat.clear_platforms()
