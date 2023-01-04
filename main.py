@@ -36,70 +36,81 @@ class Block(pygame.sprite.Sprite):
     start_image = pygame.transform.scale(pygame.image.load('start.block.png'), (10, 130))
 
     def __init__(self, group):
+        super().__init__(group)
         global last_block
         global count_platforms
         global axis
-        super().__init__(group)
+        self.a = random.randint(1, 2)
         if count_platforms == 8 and last_block.rect.x < axis and axis == 250:  # сдвиг влево
             axis = 190
         elif count_platforms == 8 and last_block.rect.x > axis and axis == 250:
             axis = 310
         elif count_platforms == 14:
             axis = 250
-        b = 0
-        if count_platforms == 9:
-            b = 220
-        if last_block:
-            if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
-                    last_block.rect.x <= axis and axis == 310):
-                a = random.randint(1, 2)
-                if a == 1:
-                    self.image = Block.image2
-                    self.block_length = platform_length
-                    self.rect = self.image.get_rect()
-                    if not b:
-                        b = random.randrange(90, 131)
-                else:
-                    self.image = Block.long_image2
-                    self.block_length = long_platform_length
-                    self.rect = self.long_image.get_rect()
-                    if not b:
-                        b = random.randrange(160, 201)
-                self.rect.x = axis + 60
-                self.rect.y = last_block.rect.y - b
-            else:
-                a = random.randint(1, 2)
-                if a == 1:
-                    self.image = Block.image
-                    self.block_length = platform_length
-                    self.rect = self.image.get_rect()
-                    if not b:
-                        b = random.randrange(90, 131)
-                else:
-                    self.image = Block.long_image
-                    self.block_length = long_platform_length
-                    self.rect = self.long_image.get_rect()
-                    if not b:
-                        b = random.randrange(160, 201)
-                self.rect.x = axis - 60
-                self.rect.y = last_block.rect.y - b
-        else:
-            self.block_length = platform_length
         self.start = False
-        if count_platforms >= 21:
+        self.get_image()
+        if count_platforms >= 17:
             count_platforms = 1
             self.image = Block.start_image
             self.block_length = platform_length
             self.rect = self.image.get_rect()
-            self.rect.x = 190
-            self.rect.y = last_block.rect.y - 200
             self.start = True
-        last_block = self
+        self.coord()
         self.replace = False
         self.curr = False
         self.turn = False
         if count_platforms == 7 or count_platforms == 13:
             self.turn = True
+        last_block = self
+
+    def coord(self):
+        b = 0
+        if count_platforms == 9 or count_platforms == 15:
+            b = 220
+        if last_block:
+            if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
+                    last_block.rect.x <= axis and axis == 310):
+                if self.a == 1:
+                    if not b:
+                        b = random.randrange(90, 131)
+                else:
+                    if not b:
+                        b = random.randrange(160, 201)
+                self.rect.x = axis + 60
+                self.rect.y = last_block.rect.y - b
+            else:
+                if self.a == 1:
+                    if not b:
+                        b = random.randrange(100, 131)
+                else:
+                    if not b:
+                        b = random.randrange(160, 201)
+                self.rect.x = axis - 60
+                self.rect.y = last_block.rect.y - b
+
+    def get_image(self):
+        if last_block:
+            if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
+                    last_block.rect.x <= axis and axis == 310):
+                if self.a == 1:
+                    self.image = Block.image2
+                    self.block_length = platform_length
+                    self.rect = self.image.get_rect()
+                else:
+                    self.image = Block.long_image2
+                    self.block_length = long_platform_length
+                    self.rect = self.long_image.get_rect()
+            else:
+                if self.a == 1:
+                    self.image = Block.image
+                    self.block_length = platform_length
+                    self.rect = self.image.get_rect()
+                else:
+                    self.image = Block.long_image
+                    self.block_length = long_platform_length
+                    self.rect = self.long_image.get_rect()
+        else:
+            self.block_length = platform_length
 
     '''
     def check_col(self):
@@ -142,10 +153,9 @@ class Cat(pygame.sprite.Sprite):
                (self.curr_block.rect[0] == self.player_x + 40 or self.curr_block.rect[0] == self.player_x - 10)
 
     def check_slip(self):
-        if self.curr_block.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]) or \
-                self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
-                                                  40]) and not self.curr_block.start and not self.jump:
-            # где не равен нулю сделать спец блоки для начала уровня
+        if (self.curr_block.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]) or
+            self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
+                                              40])) and not self.curr_block.start and not self.jump:
             return True
         return False
 
@@ -182,15 +192,16 @@ class Cat(pygame.sprite.Sprite):
 
     def two_click(self):
         if self.jump_counter == 1 and not self.check_2_jump:
-            self.gravity_y = 13
+            self.gravity_y = 14
             self.gravity_x = -self.gravity_x
             self.check_2_jump = True
         if self.jump:
             self.player_y -= self.gravity_y
-            if self.curr_block.rect[0] > self.player_x:
-                self.player_x -= self.gravity_x
-            else:
-                self.player_x += self.gravity_x
+            if self.gravity_y:
+                if self.curr_block.rect[0] > self.player_x:
+                    self.player_x -= self.gravity_x
+                else:
+                    self.player_x += self.gravity_x
             self.gravity_y -= 1
 
     def slip(self):
@@ -204,7 +215,7 @@ class Cat(pygame.sprite.Sprite):
         global count_platforms
         if self.player_y < 480 and self.gravity_y > 0 and self.jump:
             for el in all_platforms:
-                el.rect.y += self.gravity_y * 1.2
+                el.rect.y += self.gravity_y * 1.3
         else:
             pass
         for el in all_platforms:
@@ -312,7 +323,7 @@ while running:
                 if cat.jump:
                     cat.jump_counter += 1
                 else:
-                    cat.gravity_y = 13
+                    cat.gravity_y = 14
                     cat.gravity_x = 3
                     cat.jump_counter = 0
                     cat.check_2_jump = False
@@ -331,6 +342,7 @@ while running:
     if cat.check_fall() and not cat.dead:
         cat.fall()
         cat.jump = False
+
     if cat.check_slip() and not cat.dead:
         cat.is_slip = True
         cat.slip()
@@ -343,7 +355,6 @@ while running:
     elif cat.jump_2 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall():
         cat.jump = True
         cat.two_click()
-
 
     cat.update_platforms()
     cat.clear_platforms()
