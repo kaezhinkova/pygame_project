@@ -11,8 +11,10 @@ WIDTH = 500
 HEIGHT = 600
 axis = WIDTH // 2  # разница между блоками 120
 
-MYEVENTTYPE = pygame.USEREVENT + 1
+MYEVENTTYPE = pygame.USEREVENT  # для поворачивающихся блоков
 pygame.time.set_timer(MYEVENTTYPE, 1000)
+MYEVENTTYPE1 = pygame.USEREVENT + 1  # для блоков с током
+pygame.time.set_timer(MYEVENTTYPE1, 2500)
 platform_length = 130
 long_platform_length = 200
 platform_width = 10
@@ -28,6 +30,7 @@ dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
 last_block = 0
 LEVEL = 1
 block_w_teeth = 0
+block_w_tok = 0
 
 
 class Block(pygame.sprite.Sprite):
@@ -38,6 +41,12 @@ class Block(pygame.sprite.Sprite):
     start_image = pygame.transform.scale(pygame.image.load('start.block.png'), (10, 130))
     teeth_image_r = pygame.transform.scale(pygame.image.load('зуб.png'), (10, 130))
     teeth_image_l = pygame.transform.flip(teeth_image_r, True, False)
+    tok1_image = pygame.transform.scale(pygame.image.load('tok1.png'), (10, 130))
+    tok2_image = pygame.transform.scale(pygame.image.load('tok2.png'), (10, 130))
+    tok3_image = pygame.transform.scale(pygame.image.load('tok3.png'), (10, 130))
+    tok1_image_l = pygame.transform.scale(pygame.image.load('tok1.png'), (10, 200))
+    tok2_image_l = pygame.transform.scale(pygame.image.load('tok2.png'), (10, 200))
+    tok3_image_l = pygame.transform.scale(pygame.image.load('tok3.png'), (10, 200))
 
     def __init__(self, group):
         super().__init__(group)
@@ -46,6 +55,7 @@ class Block(pygame.sprite.Sprite):
         global axis
         global LEVEL
         global block_w_teeth
+        global block_w_tok
         count_platforms += 1
         self.a = random.randint(1, 2)
         if count_platforms == 9 and last_block.rect.x < axis and axis == 250:  # сдвиг влево
@@ -56,6 +66,9 @@ class Block(pygame.sprite.Sprite):
             axis = 250
         self.start = False
         self.teeth = False
+        self.tok = False
+        self.count_for_tok = 0
+        self.is_tok = False
         self.get_image()
         if count_platforms >= 17:
             count_platforms = 1
@@ -63,6 +76,10 @@ class Block(pygame.sprite.Sprite):
             block_w_teeth = random.randrange(4, 17)
             while block_w_teeth == 8 or block_w_teeth == 9 or block_w_teeth == 14 or block_w_teeth == 15:
                 block_w_teeth = random.randrange(4, 16)
+            block_w_tok = random.randrange(4, 17)
+            while block_w_tok == 8 or block_w_tok == 9 or block_w_tok == 14 or block_w_tok == 15 or \
+                    block_w_tok == block_w_teeth or abs(block_w_tok - block_w_teeth) == 1:
+                block_w_tok = random.randrange(4, 16)
             self.image = Block.start_image
             self.block_length = platform_length
             self.rect = self.image.get_rect()
@@ -77,6 +94,12 @@ class Block(pygame.sprite.Sprite):
                 self.block_length = platform_length
                 self.rect = self.image.get_rect()
                 self.teeth = True
+            elif count_platforms == block_w_tok:
+                self.image0 = self.image  # запоминание начального image с током
+                self.rect = self.image.get_rect()
+                self.tok = True
+                self.is_tok = False
+                self.count_for_tok = 1
         # if count_platforms == 3:
         #     self.image = Block.teeth_image
         #     self.block_length = platform_length
@@ -139,6 +162,33 @@ class Block(pygame.sprite.Sprite):
         else:
             self.block_length = platform_length
 
+    def update(self):
+        if self.tok:
+            if self.is_tok:
+                self.image = self.image0
+                self.is_tok = False
+            else:
+                self.is_tok = True
+
+    def do_tok(self):
+        if self.block_length == platform_length:
+            if self.count_for_tok == 1:
+                self.image = Block.tok2_image
+            elif self.count_for_tok == 2:
+                self.image = Block.tok3_image
+            else:
+                self.image = Block.tok1_image
+        else:
+            if self.count_for_tok == 1:
+                self.image = Block.tok2_image_l
+            elif self.count_for_tok == 2:
+                self.image = Block.tok3_image_l
+            else:
+                self.image = Block.tok1_image_l
+        self.count_for_tok += 1
+        if self.count_for_tok == 4:
+            self.count_for_tok = 1
+
     '''
     def check_col(self):
         if pygame.sprite.spritecollideany(self, not_all_sprites):
@@ -182,8 +232,13 @@ class Cat(pygame.sprite.Sprite):
     def check_slip(self):
         if (self.curr_block.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]) or
             self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
-                                              40])) and not self.curr_block.start and not self.jump:
+                                              40])) and not self.curr_block.start and not self.jump and not self.curr_block.is_tok:
             return True
+        if self.curr_block.is_tok and not self.hurt:
+            self.hurt = True
+            self.is_fall = False
+            self.gravity_y = 6
+            self.gravity_x = 1
         return False
 
     def current_block(self):  # текущая платформа
@@ -195,7 +250,7 @@ class Cat(pygame.sprite.Sprite):
 
     def check_collisions(self):
         for el in all_platforms:
-            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and not el.teeth:
+            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and not el.teeth and not el.is_tok:
                 el.curr = True
                 self.curr_block = el
                 if el.rect.x < self.player_x + 10:
@@ -203,9 +258,10 @@ class Cat(pygame.sprite.Sprite):
                 else:
                     self.player_x = el.rect.x - 40
                 return True
-            elif el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.teeth:
+            elif el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and (el.teeth or el.is_tok):
                 el.curr = True
                 self.curr_block = el
+                self.is_fall = False
                 self.hurt = True
                 self.gravity_y = 6
                 self.gravity_x = 1
@@ -260,6 +316,8 @@ class Cat(pygame.sprite.Sprite):
         else:
             pass
         for el in all_platforms:
+            if el.tok and el.is_tok:
+                el.do_tok()
             if el.rect.y + platform_length > HEIGHT and not el.replace:
                 Block(all_platforms)
                 el.replace = True
@@ -334,6 +392,8 @@ while running:
             running = False
         if event.type == MYEVENTTYPE:
             cat.update_turn()
+        if event.type == MYEVENTTYPE1:
+            all_platforms.update()
         if event.type == pygame.MOUSEBUTTONDOWN:
             cat.direction = 3 - cat.direction
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not cat.hurt:
@@ -366,7 +426,7 @@ while running:
             cat.jump_2 = True
             cat.gravity_y = 0
 
-    if cat.check_collisions():
+    if cat.check_collisions() and not cat.hurt:
         cat.jump = False
         cat.jump_1 = False
         cat.jump_2 = False
@@ -374,9 +434,9 @@ while running:
         cat.is_fall = False
 
     if cat.hurt and not cat.is_fall and not cat.dead:
+        print(4)
         cat.jump_back()
-        if cat.gravity_y == 10:
-            cat.is_fall = True
+        cat.gravity_y -= 1
 
     if cat.check_fall() and not cat.dead:
         cat.is_fall = True
@@ -389,10 +449,10 @@ while running:
     else:
         cat.is_slip = False
 
-    if cat.jump_1 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall():
+    if cat.jump_1 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall() and not cat.hurt:
         cat.jump = True
         cat.one_click()
-    elif cat.jump_2 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall():
+    elif cat.jump_2 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall() and not cat.hurt:
         cat.jump = True
         cat.two_click()
 
