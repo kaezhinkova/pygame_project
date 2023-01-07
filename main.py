@@ -14,7 +14,7 @@ axis = WIDTH // 2  # разница между блоками 120
 MYEVENTTYPE = pygame.USEREVENT  # для поворачивающихся блоков
 pygame.time.set_timer(MYEVENTTYPE, 1000)
 MYEVENTTYPE1 = pygame.USEREVENT + 1  # для блоков с током
-pygame.time.set_timer(MYEVENTTYPE1, 2500)
+pygame.time.set_timer(MYEVENTTYPE1, 2000)
 platform_length = 130
 long_platform_length = 200
 platform_width = 10
@@ -232,13 +232,15 @@ class Cat(pygame.sprite.Sprite):
     def check_slip(self):
         if (self.curr_block.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]) or
             self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
-                                              40])) and not self.curr_block.start and not self.jump and not self.curr_block.is_tok:
+                                              40])) and not self.curr_block.start and not self.jump and \
+                not self.curr_block.is_tok and not self.curr_block.teeth:
             return True
-        if self.curr_block.is_tok and not self.hurt:
+        if (self.curr_block.is_tok or self.curr_block.teeth) and not self.hurt:
             self.hurt = True
             self.is_fall = False
             self.gravity_y = 6
             self.gravity_x = 1
+
         return False
 
     def current_block(self):  # текущая платформа
@@ -259,6 +261,7 @@ class Cat(pygame.sprite.Sprite):
                     self.player_x = el.rect.x - 40
                 return True
             elif el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and (el.teeth or el.is_tok):
+                print(6)
                 el.curr = True
                 self.curr_block = el
                 self.is_fall = False
@@ -434,7 +437,6 @@ while running:
         cat.is_fall = False
 
     if cat.hurt and not cat.is_fall and not cat.dead:
-        print(4)
         cat.jump_back()
         cat.gravity_y -= 1
 
