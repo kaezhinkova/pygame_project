@@ -31,6 +31,8 @@ last_block = 0
 LEVEL = 1
 block_w_teeth = 0
 block_w_tok = 0
+turn1 = random.randint(3, 9)
+turn2 = turn1 + 6
 
 
 class Block(pygame.sprite.Sprite):
@@ -56,13 +58,15 @@ class Block(pygame.sprite.Sprite):
         global LEVEL
         global block_w_teeth
         global block_w_tok
+        global turn1
+        global turn2
         count_platforms += 1
         self.a = random.randint(1, 2)
-        if count_platforms == 9 and last_block.rect.x < axis and axis == 250:  # сдвиг влево
+        if count_platforms == turn1 + 1 and last_block.rect.x < axis and axis == 250:  # сдвиг влево
             axis = 190
-        elif count_platforms == 9 and last_block.rect.x > axis and axis == 250:
+        elif count_platforms == turn1 + 1 and last_block.rect.x > axis and axis == 250:
             axis = 310
-        elif count_platforms == 15:
+        elif count_platforms == turn2 + 1:
             axis = 250
         self.start = False
         self.teeth = False
@@ -71,15 +75,17 @@ class Block(pygame.sprite.Sprite):
         self.is_tok = False
         self.get_image()
         if count_platforms >= 17:
+            turn1 = random.randint(3, 9)
+            turn2 = turn1 + 6
             count_platforms = 1
             LEVEL += 1
-            block_w_teeth = random.randrange(4, 17)
-            while block_w_teeth == 8 or block_w_teeth == 9 or block_w_teeth == 14 or block_w_teeth == 15:
-                block_w_teeth = random.randrange(4, 16)
-            block_w_tok = random.randrange(4, 17)
-            while block_w_tok == 8 or block_w_tok == 9 or block_w_tok == 14 or block_w_tok == 15 or \
+            block_w_teeth = random.randrange(3, 17)
+            while block_w_teeth == turn1 or block_w_teeth == turn1 + 1 or block_w_teeth == turn2 or block_w_teeth == turn2 + 1:
+                block_w_teeth = random.randrange(3, 17)
+            block_w_tok = random.randrange(3, 17)
+            while block_w_tok == turn1 or block_w_tok == turn1 + 1 or block_w_tok == turn2 or block_w_tok == turn2 + 1 or \
                     block_w_tok == block_w_teeth or abs(block_w_tok - block_w_teeth) == 1:
-                block_w_tok = random.randrange(4, 16)
+                block_w_tok = random.randrange(3, 17)
             self.image = Block.start_image
             self.block_length = platform_length
             self.rect = self.image.get_rect()
@@ -109,13 +115,13 @@ class Block(pygame.sprite.Sprite):
         self.replace = False
         self.curr = False
         self.turn = False
-        if count_platforms == 8 or count_platforms == 14:
+        if count_platforms == turn1 or count_platforms == turn2:
             self.turn = True
         last_block = self
 
     def coord(self):
         b = 0
-        if count_platforms == 10 or count_platforms == 16:
+        if count_platforms == turn1 + 2 or count_platforms == turn2 + 2:
             b = 220
         if last_block:
             if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
