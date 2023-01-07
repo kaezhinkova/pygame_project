@@ -21,7 +21,11 @@ platform_width = 10
 all_platforms = pygame.sprite.Group()
 count_platforms = 0
 
-background = white
+all_moneys = pygame.sprite.Group()
+count_money = 0
+platforms_for_money = []
+
+background = pygame.transform.scale(pygame.image.load('fon.jpg'), (500, 600))
 player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
 player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
 player_l = pygame.transform.flip(player_r, True, False)
@@ -33,6 +37,28 @@ block_w_teeth = 0
 block_w_tok = 0
 turn1 = random.randint(3, 9)
 turn2 = turn1 + 6
+
+
+class Money(pygame.sprite.Sprite):
+
+    image = pygame.transform.scale(pygame.image.load('money.png'), (30, 30))
+
+    def __init__(self, group, block, direction):
+        super().__init__(group)
+        self.image = Money.image
+        self.rect = self.image.get_rect()
+        if direction == 'right':
+            self.rect.x = block.rect.x + platform_width + 10
+        else:
+            self.rect.x = block.rect.x - platform_width - 40
+        random_y = random.randrange(block.rect.y + block.block_length, block.rect.y - 60, -10)
+        self.rect.y = random_y
+
+    def hide(self):
+        global count_money
+        count_money += 1
+        print(count_money)
+        all_moneys.remove(self)
 
 
 class Block(pygame.sprite.Sprite):
@@ -60,6 +86,7 @@ class Block(pygame.sprite.Sprite):
         global block_w_tok
         global turn1
         global turn2
+        global platforms_for_money
         count_platforms += 1
         self.a = random.randint(1, 2)
         if count_platforms == turn1 + 1 and last_block.rect.x < axis and axis == 250:  # сдвиг влево
@@ -77,6 +104,7 @@ class Block(pygame.sprite.Sprite):
         self.is_tok = False
         self.get_image()
         if count_platforms >= 17:
+            platforms_for_money = random.sample(range(2, 17), 6)
             turn1 = random.randint(3, 9)
             turn2 = turn1 + 6
             count_platforms = 1
@@ -92,6 +120,8 @@ class Block(pygame.sprite.Sprite):
             self.block_length = platform_length
             self.rect = self.image.get_rect()
             self.start = True
+        if LEVEL == 1:
+            platforms_for_money = random.sample(range(2, 17), 6)
         if LEVEL > 1:
             if count_platforms == block_w_teeth:
                 if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
@@ -122,6 +152,17 @@ class Block(pygame.sprite.Sprite):
         if count_platforms == turn1 or count_platforms == turn2:
             self.turn = True
         last_block = self
+        self.do_money()
+
+    def do_money(self):
+        for el in platforms_for_money:
+            if count_platforms == el:
+                if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
+                        last_block.rect.x <= axis and axis == 310):
+                    direct = 'right'
+                else:
+                    direct = 'left'
+                Money(all_moneys, self, direct)
 
     def coord(self):
         b = 0
@@ -248,7 +289,7 @@ class Cat(pygame.sprite.Sprite):
                 not self.curr_block.is_tok and not self.curr_block.teeth:
             return True
         if (self.curr_block.is_tok or (self.curr_block.teeth_r and self.player_x >= self.curr_block.rect.x) or (
-                self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)) and not self.hurt:
+                self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)) and not self.hurt and not self.jump:
             self.hurt = True
             self.is_fall = False
             self.gravity_y = 6
@@ -265,8 +306,9 @@ class Cat(pygame.sprite.Sprite):
 
     def check_collisions(self):
         for el in all_platforms:
-            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and\
-                    (not self.curr_block.teeth or (self.curr_block.teeth_r and self.player_x < self.curr_block.rect.x) or
+            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and \
+                    (not self.curr_block.teeth or (
+                            self.curr_block.teeth_r and self.player_x < self.curr_block.rect.x) or
                      (self.curr_block.teeth_l and self.player_x > self.curr_block.rect.x)) and not el.is_tok:
                 el.curr = True
                 self.curr_block = el
@@ -284,6 +326,11 @@ class Cat(pygame.sprite.Sprite):
                 self.hurt = True
                 self.gravity_y = 6
                 self.gravity_x = 1
+
+    def check_money(self):
+        for el in all_moneys:
+            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]):
+                el.hide()
 
     def jump_back(self):
         self.player_y -= self.gravity_y
@@ -331,6 +378,8 @@ class Cat(pygame.sprite.Sprite):
         global count_platforms
         if self.player_y < 480 and self.gravity_y > 0 and self.jump:
             for el in all_platforms:
+                el.rect.y += self.gravity_y * 1.3
+            for el in all_moneys:
                 el.rect.y += self.gravity_y * 1.3
         else:
             pass
@@ -380,8 +429,9 @@ for i in range(5):
     Block(all_platforms)
 while running:
     timer.tick(fps)
-    screen.fill(background)
+    screen.blit(background, (0, 0))
     all_platforms.draw(screen)
+    all_moneys.draw(screen)
     if cat.check_fallen():
         cat.jump = False
         cat.dead = True
@@ -444,7 +494,9 @@ while running:
                 cat.jump = False
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 3 and cat.jump:
             cat.jump_2 = True
-            cat.gravity_y = 0
+            cat.gravity_y = -1
+
+    cat.check_money()
 
     if cat.check_collisions() and not cat.hurt:
         cat.jump = False
