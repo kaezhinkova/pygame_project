@@ -70,6 +70,8 @@ class Block(pygame.sprite.Sprite):
             axis = 250
         self.start = False
         self.teeth = False
+        self.teeth_r = False
+        self.teeth_l = False
         self.tok = False
         self.count_for_tok = 0
         self.is_tok = False
@@ -95,8 +97,10 @@ class Block(pygame.sprite.Sprite):
                 if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
                         last_block.rect.x <= axis and axis == 310):
                     self.image = Block.teeth_image_l
+                    self.teeth_l = True
                 else:
                     self.image = Block.teeth_image_r
+                    self.teeth_r = True
                 self.block_length = platform_length
                 self.rect = self.image.get_rect()
                 self.teeth = True
@@ -123,6 +127,8 @@ class Block(pygame.sprite.Sprite):
         b = 0
         if count_platforms == turn1 + 2 or count_platforms == turn2 + 2:
             b = 220
+        elif count_platforms == turn1 + 1 or count_platforms == turn2 + 1:
+            b = 200
         if last_block:
             if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
                     last_block.rect.x <= axis and axis == 310):
@@ -241,7 +247,8 @@ class Cat(pygame.sprite.Sprite):
                                               40])) and not self.curr_block.start and not self.jump and \
                 not self.curr_block.is_tok and not self.curr_block.teeth:
             return True
-        if (self.curr_block.is_tok or self.curr_block.teeth) and not self.hurt:
+        if (self.curr_block.is_tok or (self.curr_block.teeth_r and self.player_x >= self.curr_block.rect.x) or (
+                self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)) and not self.hurt:
             self.hurt = True
             self.is_fall = False
             self.gravity_y = 6
@@ -258,7 +265,9 @@ class Cat(pygame.sprite.Sprite):
 
     def check_collisions(self):
         for el in all_platforms:
-            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and not el.teeth and not el.is_tok:
+            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and\
+                    (not self.curr_block.teeth or (self.curr_block.teeth_r and self.player_x < self.curr_block.rect.x) or
+                     (self.curr_block.teeth_l and self.player_x > self.curr_block.rect.x)) and not el.is_tok:
                 el.curr = True
                 self.curr_block = el
                 if el.rect.x < self.player_x + 10:
@@ -266,8 +275,9 @@ class Cat(pygame.sprite.Sprite):
                 else:
                     self.player_x = el.rect.x - 40
                 return True
-            elif el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and (el.teeth or el.is_tok):
-                print(6)
+            elif el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and \
+                    ((self.curr_block.teeth_r and self.player_x >= self.curr_block.rect.x) or
+                     (self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x) or el.is_tok):
                 el.curr = True
                 self.curr_block = el
                 self.is_fall = False
@@ -335,7 +345,7 @@ class Cat(pygame.sprite.Sprite):
         for el in all_platforms:
             if el.turn:
                 el.image = pygame.transform.flip(el.image, True, False)
-                if self.curr_block.turn and self.is_slip:
+                if self.curr_block.turn and self.check_slip():
                     if self.player_x < el.rect.x:
                         self.player_x = el.rect.x + platform_width
                     else:
@@ -400,7 +410,8 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == MYEVENTTYPE:
-            cat.update_turn()
+            if not cat.dead:
+                cat.update_turn()
         if event.type == MYEVENTTYPE1:
             all_platforms.update()
         if event.type == pygame.MOUSEBUTTONDOWN:
