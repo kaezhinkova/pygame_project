@@ -40,7 +40,6 @@ turn2 = turn1 + 6
 
 
 class Money(pygame.sprite.Sprite):
-
     image = pygame.transform.scale(pygame.image.load('money.png'), (30, 30))
 
     def __init__(self, group, block, direction):
@@ -57,7 +56,6 @@ class Money(pygame.sprite.Sprite):
     def hide(self):
         global count_money
         count_money += 1
-        print(count_money)
         all_moneys.remove(self)
 
 
@@ -395,7 +393,7 @@ class Cat(pygame.sprite.Sprite):
             if el.turn:
                 el.image = pygame.transform.flip(el.image, True, False)
                 if self.curr_block.turn and self.check_slip():
-                    if self.player_x < el.rect.x:
+                    if self.player_x <= el.rect.x:
                         self.player_x = el.rect.x + platform_width
                     else:
                         self.player_x = el.rect.x - 40
@@ -408,7 +406,7 @@ class Cat(pygame.sprite.Sprite):
 
 fps = 60
 flip = False
-# font = pygame.font.Font('font1.tff', 16)
+font = pygame.font.Font('Lilita.ttf', 15)
 timer = pygame.time.Clock()
 
 # game variables
@@ -432,6 +430,10 @@ while running:
     screen.blit(background, (0, 0))
     all_platforms.draw(screen)
     all_moneys.draw(screen)
+    text = font.render(f"Collected coins: {count_money}", True, (0, 0, 0))
+    text_x = 15
+    text_y = 10
+    screen.blit(text, (text_x, text_y))
     if cat.check_fallen():
         cat.jump = False
         cat.dead = True
