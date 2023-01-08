@@ -33,6 +33,7 @@ dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
 
 last_block = 0
 LEVEL = 1
+screen_LEVEL = 1
 block_w_teeth = 0
 block_w_tok = 0
 turn1 = random.randint(3, 9)
@@ -118,6 +119,7 @@ class Block(pygame.sprite.Sprite):
             self.block_length = platform_length
             self.rect = self.image.get_rect()
             self.start = True
+            self.start_flag = False
         if LEVEL == 1:
             platforms_for_money = random.sample(range(2, 17), 6)
         if LEVEL > 1:
@@ -303,7 +305,12 @@ class Cat(pygame.sprite.Sprite):
                 return el
 
     def check_collisions(self):
+        global screen_LEVEL
         for el in all_platforms:
+            if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.start:
+                if not el.start_flag:
+                    el.start_flag = True
+                    screen_LEVEL += 1
             if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and \
                     (not self.curr_block.teeth or (
                             self.curr_block.teeth_r and self.player_x < self.curr_block.rect.x) or
@@ -392,8 +399,8 @@ class Cat(pygame.sprite.Sprite):
         for el in all_platforms:
             if el.turn:
                 el.image = pygame.transform.flip(el.image, True, False)
-                if self.curr_block.turn and self.check_slip():
-                    if self.player_x <= el.rect.x:
+                if self.curr_block.turn and self.is_slip:
+                    if self.player_x < el.rect.x:
                         self.player_x = el.rect.x + platform_width
                     else:
                         self.player_x = el.rect.x - 40
@@ -406,7 +413,7 @@ class Cat(pygame.sprite.Sprite):
 
 fps = 60
 flip = False
-font = pygame.font.Font('Lilita.ttf', 15)
+font = pygame.font.Font('Lilita.ttf', 20)
 timer = pygame.time.Clock()
 
 # game variables
@@ -433,7 +440,11 @@ while running:
     text = font.render(f"Collected coins: {count_money}", True, (0, 0, 0))
     text_x = 15
     text_y = 10
+    text_level = font.render(f"LEVEL: {screen_LEVEL}", True, (0, 0, 0))
+    text_level_x = 15
+    text_level_y = HEIGHT - 30
     screen.blit(text, (text_x, text_y))
+    screen.blit(text_level, (text_level_x, text_level_y))
     if cat.check_fallen():
         cat.jump = False
         cat.dead = True
