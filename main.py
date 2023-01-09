@@ -20,6 +20,7 @@ long_platform_length = 200
 platform_width = 10
 all_platforms = pygame.sprite.Group()
 count_platforms = 0
+difficult_platforms_count = 1
 
 all_moneys = pygame.sprite.Group()
 count_money = 0
@@ -34,8 +35,8 @@ dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
 last_block = 0
 LEVEL = 1
 screen_LEVEL = 1
-block_w_teeth = 0
-block_w_tok = 0
+block_w_teeth = []
+block_w_tok = []
 turn1 = random.randint(3, 9)
 turn2 = turn1 + 6
 
@@ -86,6 +87,7 @@ class Block(pygame.sprite.Sprite):
         global turn1
         global turn2
         global platforms_for_money
+        global difficult_platforms_count
         count_platforms += 1
         self.a = random.randint(1, 2)
         if count_platforms == turn1 + 1 and last_block.rect.x < axis and axis == 250:  # сдвиг влево
@@ -95,6 +97,7 @@ class Block(pygame.sprite.Sprite):
         elif count_platforms == turn2 + 1:
             axis = 250
         self.start = False
+        self.start_flag = False
         self.teeth = False
         self.teeth_r = False
         self.teeth_l = False
@@ -108,13 +111,23 @@ class Block(pygame.sprite.Sprite):
             turn2 = turn1 + 6
             count_platforms = 1
             LEVEL += 1
-            block_w_teeth = random.randrange(3, 17)
-            while block_w_teeth == turn1 or block_w_teeth == turn1 + 1 or block_w_teeth == turn2 or block_w_teeth == turn2 + 1:
-                block_w_teeth = random.randrange(3, 17)
-            block_w_tok = random.randrange(3, 17)
-            while block_w_tok == turn1 or block_w_tok == turn1 + 1 or block_w_tok == turn2 or block_w_tok == turn2 + 1 or \
-                    block_w_tok == block_w_teeth or abs(block_w_tok - block_w_teeth) == 1:
-                block_w_tok = random.randrange(3, 17)
+            if LEVEL == 2:
+                difficult_platforms_count = 2
+            elif LEVEL == 6:
+                difficult_platforms_count = 3
+            block_w_teeth0 = random.sample(range(3, 17), difficult_platforms_count)
+            block_w_teeth = []
+            for el in block_w_teeth0:
+                while el == turn1 or el == turn1 + 1 or el == turn2 or el == turn2 + 1:
+                    el = random.randrange(3, 17)
+                block_w_teeth.append(el)
+            block_w_tok = []
+            block_w_tok0 = random.sample(range(3, 17), difficult_platforms_count)
+            for el in block_w_tok0:
+                while el == turn1 + 1 or el == turn2 + 1 or \
+                        el in block_w_teeth:
+                    el = random.randrange(3, 17)
+                block_w_tok.append(el)
             self.image = Block.start_image
             self.block_length = platform_length
             self.rect = self.image.get_rect()
@@ -123,23 +136,37 @@ class Block(pygame.sprite.Sprite):
         if LEVEL == 1:
             platforms_for_money = random.sample(range(2, 17), 6)
         if LEVEL > 1:
-            if count_platforms == block_w_teeth:
-                if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
-                        last_block.rect.x <= axis and axis == 310):
-                    self.image = Block.teeth_image_l
-                    self.teeth_l = True
-                else:
-                    self.image = Block.teeth_image_r
-                    self.teeth_r = True
-                self.block_length = platform_length
-                self.rect = self.image.get_rect()
-                self.teeth = True
-            elif count_platforms == block_w_tok:
-                self.image0 = self.image  # запоминание начального image с током
-                self.rect = self.image.get_rect()
-                self.tok = True
-                self.is_tok = False
-                self.count_for_tok = 1
+            if count_platforms in block_w_tok:
+                s = 0
+                for el in block_w_tok:
+                    if el == count_platforms:
+                        s = el
+                        self.image0 = self.image  # запоминание начального image с током
+                        self.rect = self.image.get_rect()
+                        self.tok = True
+                        self.is_tok = False
+                        self.count_for_tok = 1
+                    break
+                if s in block_w_tok:
+                    block_w_tok.remove(s)
+            elif count_platforms in block_w_teeth:
+                s = 0
+                for el in block_w_teeth:
+                    if el == count_platforms:
+                        s = el
+                        if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
+                                last_block.rect.x <= axis and axis == 310):
+                            self.image = Block.teeth_image_l
+                            self.teeth_l = True
+                        else:
+                            self.image = Block.teeth_image_r
+                            self.teeth_r = True
+                        self.block_length = platform_length
+                        self.rect = self.image.get_rect()
+                        self.teeth = True
+                    break
+                if s in block_w_teeth:
+                    block_w_teeth.remove(s)
         # if count_platforms == 3:
         #     self.image = Block.teeth_image
         #     self.block_length = platform_length
@@ -376,12 +403,17 @@ class Cat(pygame.sprite.Sprite):
         self.player_y += 0.3
 
     def fall(self):
-        self.player_y += 1.5
+        self.player_y += 1.8
         return True
 
     def update_platforms(self):
         global count_platforms
-        if self.player_y < 480 and self.gravity_y > 0 and self.jump:
+        if self.player_y < 200 and self.gravity_y > 0 and self.jump:
+            for el in all_platforms:
+                el.rect.y += self.gravity_y * 1.8
+            for el in all_moneys:
+                el.rect.y += self.gravity_y * 1.8
+        elif self.player_y < 480 and self.gravity_y > 0 and self.jump:
             for el in all_platforms:
                 el.rect.y += self.gravity_y * 1.3
             for el in all_moneys:
@@ -430,6 +462,7 @@ first_block.rect.x = 190
 first_block.rect.y = 460
 last_block = first_block
 first_block.start = True
+first_block.start_flag = True
 for i in range(5):
     Block(all_platforms)
 while running:
