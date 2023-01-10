@@ -111,15 +111,15 @@ class Block(pygame.sprite.Sprite):
             turn2 = turn1 + 6
             count_platforms = 1
             LEVEL += 1
-            if LEVEL == 2:
+            if LEVEL == 5:
                 difficult_platforms_count = 2
-            elif LEVEL == 6:
-                difficult_platforms_count = 3
-            block_w_teeth0 = random.sample(range(3, 17), difficult_platforms_count)
+            # elif LEVEL == 1:
+            #     difficult_platforms_count = 3
+            block_w_teeth0 = random.sample(range(3, 17, 2), difficult_platforms_count)
             block_w_teeth = []
             for el in block_w_teeth0:
-                while el == turn1 or el == turn1 + 1 or el == turn2 or el == turn2 + 1:
-                    el = random.randrange(3, 17)
+                while el == turn1 or el == turn1 + 1 or el == turn2 or el == turn2 + 1 or el in block_w_teeth:
+                    el = random.randrange(3, 17, 2)
                 block_w_teeth.append(el)
             block_w_tok = []
             block_w_tok0 = random.sample(range(3, 17), difficult_platforms_count)
@@ -128,6 +128,7 @@ class Block(pygame.sprite.Sprite):
                         el in block_w_teeth:
                     el = random.randrange(3, 17)
                 block_w_tok.append(el)
+            block_w_tok.sort()
             self.image = Block.start_image
             self.block_length = platform_length
             self.rect = self.image.get_rect()
@@ -423,7 +424,7 @@ class Cat(pygame.sprite.Sprite):
         for el in all_platforms:
             if el.tok and el.is_tok:
                 el.do_tok()
-            if el.rect.y + platform_length > HEIGHT and not el.replace:
+            if el.rect.y > HEIGHT and not el.replace:
                 Block(all_platforms)
                 el.replace = True
 
@@ -510,8 +511,6 @@ while running:
                 cat.update_turn()
         if event.type == MYEVENTTYPE1:
             all_platforms.update()
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            cat.direction = 3 - cat.direction
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not cat.hurt:
             cat.jump_2 = False
             if not cat.check_fall():
