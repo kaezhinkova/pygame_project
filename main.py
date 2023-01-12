@@ -1,5 +1,6 @@
 import pygame
 import random
+import sys
 
 pygame.init()
 
@@ -21,6 +22,7 @@ MYEVENTTYPE = pygame.USEREVENT  # для поворачивающихся бло
 pygame.time.set_timer(MYEVENTTYPE, 1000)
 MYEVENTTYPE1 = pygame.USEREVENT + 1  # для блоков с током
 pygame.time.set_timer(MYEVENTTYPE1, 2000)
+MYEVENTTYPE2 = pygame.USEREVENT + 2
 platform_length = 130
 long_platform_length = 200
 platform_width = 10
@@ -81,6 +83,9 @@ class Block(pygame.sprite.Sprite):
     tok1_image_l = pygame.transform.scale(pygame.image.load('tok1.png'), (10, 200))
     tok2_image_l = pygame.transform.scale(pygame.image.load('tok2.png'), (10, 200))
     tok3_image_l = pygame.transform.scale(pygame.image.load('tok3.png'), (10, 200))
+    fade1_image = pygame.transform.scale(pygame.image.load('crash_block_1.png'), (10, 130))
+    fade2_image = pygame.transform.scale(pygame.image.load('crash_block_2.png'), (10, 130))
+    fade3_image = pygame.transform.scale(pygame.image.load('crash_block_3.png'), (10, 130))
 
     def __init__(self, group):
         super().__init__(group)
@@ -110,6 +115,8 @@ class Block(pygame.sprite.Sprite):
         self.tok = False
         self.count_for_tok = 0
         self.is_tok = False
+        self.fade = False
+        self.rect = pygame.Rect(-10, -10, 0, 0)
         self.get_image()
         if count_platforms >= 17:
             platforms_for_money = random.sample(range(2, 17), 6)
@@ -174,11 +181,13 @@ class Block(pygame.sprite.Sprite):
                     break
                 if s in block_w_teeth:
                     block_w_teeth.remove(s)
+
         # if count_platforms == 3:
-        #     self.image = Block.teeth_image
-        #     self.block_length = platform_length
-        #     self.rect = self.image.get_rect()
-        #     self.teeth = True
+        #     self.fade = True
+        #     self.count_for_fade = 0
+        #     self.fade_start = False
+        #     self.disappear = False
+
         self.coord()
         self.replace = False
         self.curr = False
@@ -256,6 +265,16 @@ class Block(pygame.sprite.Sprite):
                 self.is_tok = False
             else:
                 self.is_tok = True
+        # if self.fade and self.fade_start:
+        #     if not self.count_for_fade:
+        #         self.image = Block.fade1_image
+        #     elif self.count_for_fade == 1:
+        #         self.image = Block.fade2_image
+        #     elif self.count_for_fade == 2:
+        #         self.image = Block.fade3_image
+        #     else:
+        #         self.disappear = True
+        #     self.count_for_fade += 1
 
     def do_tok(self):
         if self.block_length == platform_length:
@@ -281,6 +300,7 @@ class Cat(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.image = player
+        self.rect = self.image.get_rect()
         self.image_r = player_r
         self.image_l = player_l
         self.player_x = 200
@@ -299,6 +319,9 @@ class Cat(pygame.sprite.Sprite):
         self.is_slip = False
         self.is_fall = False
         self.hurt = False
+
+    def update_rect(self):
+        self.rect = self.image.get_rect()
 
     def check_fallen(self):  # кот коснулся предела окна
         return self.player_x > WIDTH or self.player_x < 0 or self.player_y + 40 > HEIGHT
@@ -339,6 +362,9 @@ class Cat(pygame.sprite.Sprite):
                     el.start_flag = True
                     screen_LEVEL += 1
                     sound_new_level.play()
+            # if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.fade:
+            #     pygame.time.set_timer(MYEVENTTYPE2, 500)
+            #     el.fade_start = True
             if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and \
                     (not self.curr_block.teeth or (
                             self.curr_block.teeth_r and self.player_x < self.curr_block.rect.x) or
@@ -409,7 +435,6 @@ class Cat(pygame.sprite.Sprite):
         return True
 
     def update_platforms(self):
-        global count_platforms
         if self.player_y < 200 and self.gravity_y > 0 and self.jump:
             for el in all_platforms:
                 el.rect.y += self.gravity_y * 1.8
@@ -450,7 +475,62 @@ flip = False
 font = pygame.font.Font('Lilita.ttf', 20)
 timer = pygame.time.Clock()
 
-# game variables
+
+def terminate():
+    pygame.quit()
+    sys.exit()
+
+
+def game_over():
+    intro_text = ["All collected coins:", str(count_money), '',
+                  "Count levels:", str(screen_LEVEL), '', ]
+    fon = pygame.transform.scale(pygame.image.load('fon.jpg'), (WIDTH, HEIGHT))
+    screen.blit((fon), (0, 0))
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                start()
+                return
+        pygame.display.flip()
+
+
+def start():
+    global cat, running, first_block, last_block, first_block, all_platforms, count_platforms, \
+        difficult_platforms_count, all_moneys, count_money, platforms_for_money, LEVEL, screen_LEVEL, block_w_teeth, \
+        block_w_tok, turn2, turn1, axis, screen
+    LEVEL = 1
+    screen_LEVEL = 1
+    block_w_teeth = []
+    block_w_tok = []
+    turn1 = random.randint(3, 9)
+    turn2 = turn1 + 6
+    axis = WIDTH // 2
+    all_platforms = pygame.sprite.Group()
+    count_platforms = 0
+    difficult_platforms_count = 1
+    all_moneys = pygame.sprite.Group()
+    count_money = 0
+    platforms_for_money = []
+    cat = Cat()
+    running = True
+    first_block = Block(all_platforms)
+    first_block.rect = pygame.Rect(190, 460, platform_width, platform_length)
+    first_block.start = True
+    first_block.start_flag = True
+    for i in range(5):
+        Block(all_platforms)
 
 
 # create screen
@@ -496,7 +576,6 @@ while running:
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
         else:
             screen.blit(cat.image_l, (cat.player_x, cat.player_y))
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -535,6 +614,10 @@ while running:
             cat.jump_2 = True
             cat.gravity_y = -1
 
+    # for el in all_platforms:
+    #     if el.fade and el.disappear:
+    #         all_platforms.remove(el)
+
     cat.check_money()
 
     if cat.check_collisions() and not cat.hurt:
@@ -570,4 +653,8 @@ while running:
     cat.clear_platforms()
 
     pygame.display.flip()
+    if cat.dead:
+        screen.blit(cat.image_dead, (cat.player_x, cat.player_y))
+        pygame.time.delay(1000)
+        game_over()
 pygame.quit()
