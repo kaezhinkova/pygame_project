@@ -11,6 +11,12 @@ WIDTH = 500
 HEIGHT = 600
 axis = WIDTH // 2  # разница между блоками 120
 
+pygame.mixer.pre_init(44100, 16, 2, 4096)
+sound1 = pygame.mixer.Sound('sound6_fon.mp3')
+sound1.set_volume(0.3)
+sound_coin = pygame.mixer.Sound('money.mp3')
+sound_new_level = pygame.mixer.Sound('win.mp3')
+
 MYEVENTTYPE = pygame.USEREVENT  # для поворачивающихся блоков
 pygame.time.set_timer(MYEVENTTYPE, 1000)
 MYEVENTTYPE1 = pygame.USEREVENT + 1  # для блоков с током
@@ -111,7 +117,7 @@ class Block(pygame.sprite.Sprite):
             turn2 = turn1 + 6
             count_platforms = 1
             LEVEL += 1
-            if LEVEL == 5:
+            if LEVEL == 3:
                 difficult_platforms_count = 2
             # elif LEVEL == 1:
             #     difficult_platforms_count = 3
@@ -197,7 +203,7 @@ class Block(pygame.sprite.Sprite):
         if count_platforms == turn1 + 2 or count_platforms == turn2 + 2:
             b = 220
         elif count_platforms == turn1 + 1 or count_platforms == turn2 + 1:
-            b = 200
+            b = 210
         if last_block:
             if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
                     last_block.rect.x <= axis and axis == 310):
@@ -270,15 +276,6 @@ class Block(pygame.sprite.Sprite):
         if self.count_for_tok == 4:
             self.count_for_tok = 1
 
-    '''
-    def check_col(self):
-        if pygame.sprite.spritecollideany(self, not_all_sprites):
-            return True
-        else:
-            not_all_sprites.add(self)
-        return False
-    '''
-
 
 class Cat(pygame.sprite.Sprite):
     def __init__(self):
@@ -314,7 +311,9 @@ class Cat(pygame.sprite.Sprite):
         if (self.curr_block.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]) or
             self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
                                               40])) and not self.curr_block.start and not self.jump and \
-                not self.curr_block.is_tok and not self.curr_block.teeth:
+                not self.curr_block.is_tok and not (
+                (self.curr_block.teeth_r and self.player_x >= self.curr_block.rect.x) or (
+                self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)):
             return True
         if (self.curr_block.is_tok or (self.curr_block.teeth_r and self.player_x >= self.curr_block.rect.x) or (
                 self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)) and not self.hurt and not self.jump:
@@ -339,6 +338,7 @@ class Cat(pygame.sprite.Sprite):
                 if not el.start_flag:
                     el.start_flag = True
                     screen_LEVEL += 1
+                    sound_new_level.play()
             if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and \
                     (not self.curr_block.teeth or (
                             self.curr_block.teeth_r and self.player_x < self.curr_block.rect.x) or
@@ -364,6 +364,7 @@ class Cat(pygame.sprite.Sprite):
         for el in all_moneys:
             if el.rect.colliderect([self.player_x, self.player_y, 40, 40]):
                 el.hide()
+                sound_coin.play()
 
     def jump_back(self):
         self.player_y -= self.gravity_y
@@ -404,7 +405,7 @@ class Cat(pygame.sprite.Sprite):
         self.player_y += 0.3
 
     def fall(self):
-        self.player_y += 1.8
+        self.player_y += 2
         return True
 
     def update_platforms(self):
@@ -424,7 +425,7 @@ class Cat(pygame.sprite.Sprite):
         for el in all_platforms:
             if el.tok and el.is_tok:
                 el.do_tok()
-            if el.rect.y > HEIGHT and not el.replace:
+            if el.rect.y + el.block_length > HEIGHT and not el.replace:
                 Block(all_platforms)
                 el.replace = True
 
@@ -432,11 +433,11 @@ class Cat(pygame.sprite.Sprite):
         for el in all_platforms:
             if el.turn:
                 el.image = pygame.transform.flip(el.image, True, False)
-                if self.curr_block.turn and self.is_slip:
-                    if self.player_x < el.rect.x:
-                        self.player_x = el.rect.x + platform_width
-                    else:
-                        self.player_x = el.rect.x - 40
+        if self.curr_block.turn and self.is_slip:
+            if self.player_x < self.curr_block.rect.x:
+                self.player_x = self.curr_block.rect.x + platform_width
+            else:
+                self.player_x = self.curr_block.rect.x - 40
 
     def clear_platforms(self):
         for el in all_platforms:
@@ -466,6 +467,8 @@ first_block.start = True
 first_block.start_flag = True
 for i in range(5):
     Block(all_platforms)
+
+sound1.play(-1)
 while running:
     timer.tick(fps)
     screen.blit(background, (0, 0))
@@ -489,15 +492,6 @@ while running:
         cat.curr_block = cat.current_block()
         if cat.check_fall():
             screen.blit(cat.image, (cat.player_x, cat.player_y))
-        # elif cat.curr_block.rect[1] > cat.player_y and cat.curr_block.rect[0] < WIDTH // 2 and cat.player_x + 20 \
-        #         < cat.curr_block.rect[0]:
-        #     print(6)
-        #     cat.player_x = cat.curr_block.rect[0] + 10
-        #     screen.blit(cat.image_r, (cat.player_x, cat.player_y))
-        # elif cat.curr_block.rect[1] > cat.player_y and cat.curr_block.rect[0] > WIDTH // 2 and \
-        #         cat.player_x - 20 > cat.curr_block.rect[0] + 10:  # вернуться, когда будет длинный прыжок
-        #     cat.player_x = cat.curr_block.rect[0] - 40
-        #     screen.blit(cat.image_l, (cat.player_x, cat.player_y))
         elif cat.curr_block.rect.x < cat.player_x:
             screen.blit(cat.image_r, (cat.player_x, cat.player_y))
         else:
