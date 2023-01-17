@@ -42,6 +42,8 @@ player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
 player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
 player_l = pygame.transform.flip(player_r, True, False)
 dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
+start_fon = pygame.transform.scale(pygame.image.load('start.png'), (200, 60))
+question = pygame.transform.scale(pygame.image.load('question.png'), (90, 60))
 
 last_block = 0
 LEVEL = 1
@@ -86,9 +88,6 @@ class Block(pygame.sprite.Sprite):
     tok1_image_l = pygame.transform.scale(pygame.image.load('tok1.png'), (10, 200))
     tok2_image_l = pygame.transform.scale(pygame.image.load('tok2.png'), (10, 200))
     tok3_image_l = pygame.transform.scale(pygame.image.load('tok3.png'), (10, 200))
-    # fade1_image = pygame.transform.scale(pygame.image.load('crash_block_1.png'), (10, 130))
-    # fade2_image = pygame.transform.scale(pygame.image.load('crash_block_2.png'), (10, 130))
-    # fade3_image = pygame.transform.scale(pygame.image.load('crash_block_3.png'), (10, 130))
 
     def __init__(self, group):
         super().__init__(group)
@@ -122,8 +121,7 @@ class Block(pygame.sprite.Sprite):
         self.rect = pygame.Rect(-10, -10, 0, 0)
         self.get_image()
         if count_platforms >= 17:
-            count_m = random.randrange(2, 7)
-            platforms_for_money = random.sample(range(2, 17), count_m)
+            platforms_for_money = random.sample(range(2, 17), 6)
             turn1 = random.randint(3, 9)
             turn2 = turn1 + 6
             count_platforms = 1
@@ -152,8 +150,7 @@ class Block(pygame.sprite.Sprite):
             self.start = True
             self.start_flag = False
         if LEVEL == 1:
-            count_m = random.randrange(2, 7)
-            platforms_for_money = random.sample(range(2, 17), count_m)
+            platforms_for_money = random.sample(range(2, 17), 6)
         if LEVEL > 1:
             if count_platforms in block_w_tok:
                 s = 0
@@ -491,6 +488,49 @@ def terminate():
     sys.exit()
 
 
+def rules():
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption('cat jump')
+
+
+def start_game():
+    intro_text = ["Game Cat Jump", '',
+                  "Rules:", 'тыкать', '', ]
+    fon = pygame.transform.scale(pygame.image.load('fon.jpg'), (WIDTH, HEIGHT))
+    screen.blit((fon), (0, 0))
+    text_coord = 50
+    screen.blit(player, (200, 370))
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+    start_fon_sp = pygame.sprite.Sprite()
+    start_fon_sp.image = start_fon
+    start_fon_sp.rect = pygame.Rect(155, 400, 200, 60)
+    screen.blit(start_fon_sp.image, (155, 400))
+    que = pygame.sprite.Sprite()
+    que.image = question
+    que.rect = pygame.Rect(155, 200, 90, 60)
+    screen.blit(que.image, (155, 200))
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if start_fon_sp.rect.x <= event.pos[0] <= start_fon_sp.rect.x + 200 and \
+                        start_fon_sp.rect.y <= event.pos[1] <= start_fon_sp.rect.y + 60:
+                    return
+                elif que.rect.x <= event.pos[0] <= que.rect.x + 200 and \
+                        que.rect.y <= event.pos[1] <= que.rect.y + 60:
+                    rules()
+        pygame.display.flip()
+
+
 def game_over():
     intro_text = ["All collected coins:", str(count_money), '',
                   "Count levels:", str(screen_LEVEL), '', ]
@@ -559,6 +599,7 @@ for i in range(5):
     Block(all_platforms)
 
 pygame.mixer.Channel(0).play(sound1, loops=-1)
+start_game()
 while running:
     timer.tick(fps)
     screen.blit(background, (0, 0))
