@@ -8,6 +8,7 @@ pygame.init()
 white = (255, 255, 255)
 black = (0, 0, 0)
 gray = (120, 120, 120)
+
 WIDTH = 500
 HEIGHT = 600
 axis = WIDTH // 2  # разница между блоками 120
