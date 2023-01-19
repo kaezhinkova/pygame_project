@@ -593,6 +593,25 @@ def game_over():  # запись рекорда в файл
                     return True
         pygame.display.flip()
         timer.tick(30)
+        
+        
+def print_text(message, x, y, font_color='black', font_type='Lilita.ttf', font_size=30):
+    font_type = pygame.font.Font(font_type, font_size)
+    text = font_type.render(message, False, font_color)
+    screen.blit(text, (x, y))
+
+    
+def pause():
+    p = True
+    while p:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+        print_text('Pause. Click enter to continue.', 65, 200)
+        if pygame.key.get_pressed()[pygame.K_RETURN]:
+            p = False
+        pygame.display.update()
 
 
 def start():  # обновление констант пр новой игре
@@ -670,6 +689,8 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if pygame.key.get_pressed()[pygame.K_SPACE]:
+            pause()
         if event.type == MYEVENTTYPE:
             if not cat.dead:
                 cat.update_turn()
