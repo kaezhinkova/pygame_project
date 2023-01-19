@@ -573,6 +573,17 @@ def start_game():
         cat1.start_move(start_fon_sp)
         pygame.display.flip()
 
+def pause():
+    p = True
+    while p:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        if pygame.key.get_pressed()[pygame.K_RETURN]:
+            p = False
+        pygame.display.update()
 
 def game_over():
     f = open("result.txt", encoding='utf8')
@@ -685,6 +696,8 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if pygame.key.get_pressed()[pygame.K_SPACE]:
+            pause()
         if event.type == MYEVENTTYPE:
             if not cat.dead:
                 cat.update_turn()
