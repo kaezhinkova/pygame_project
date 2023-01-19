@@ -1,6 +1,8 @@
 import pygame
 import random
 import sys
+from PyQt5 import uic
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 
 pygame.init()
 
@@ -527,6 +529,18 @@ def text():
     screen.blit(string_rendered, intro_rect)
 
 
+def text2(text):
+    text_coord = 50
+    for line in text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+
 def start_game():
     screen.blit((fon), (0, 0))
     start_fon_sp = pygame.sprite.Sprite()
@@ -561,32 +575,39 @@ def start_game():
 
 
 def game_over():
+    f = open("result.txt", encoding='utf8')
+    res = f.readlines()
+    record = res[0]
+    intro_text = ["All collected coins:", str(count_money), '',
+                  "Count levels:", str(screen_LEVEL), '']
+    if count_money > int(record):
+        intro_text.append('You broke the record!')
+        intro_text.append('')
+        f.close()
+        f = open("result.txt", 'w')
+        f.write(str(count_money))
+        record = count_money
+        f.close()
+    f.close()
+    intro_text.append('Record: ')
+    intro_text.append(str(record))
     rstart = pygame.sprite.Sprite()
     rstart.image = restart
     rstart.rect = pygame.Rect(155, 400, 200, 60)
-    screen.blit((fon), (0, 0))
-    screen.blit(rstart.image, (155, 400))
-    intro_text = ["All collected coins:", str(count_money), '',
-                  "Count levels:", str(screen_LEVEL), '', ]
-    text_coord = 50
-    for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('black'))
-        intro_rect = string_rendered.get_rect()
-        text_coord += 10
-        intro_rect.top = text_coord
-        intro_rect.x = 10
-        text_coord += intro_rect.height
-        screen.blit(string_rendered, intro_rect)
     while True:
+        screen.blit((fon), (0, 0))
+        screen.blit(rstart.image, (155, 400))
+        text2(intro_text)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 if rstart.rect.x <= event.pos[0] <= rstart.rect.x + 200 and \
                         rstart.rect.y <= event.pos[1] <= rstart.rect.y + 60:
                     start()
                     return True
         pygame.display.flip()
+        timer.tick(30)
 
 
 def start():
