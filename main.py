@@ -8,6 +8,7 @@ pygame.init()
 white = (255, 255, 255)
 black = (0, 0, 0)
 gray = (120, 120, 120)
+
 WIDTH = 500
 HEIGHT = 600
 axis = WIDTH // 2  # разница между блоками 120
@@ -15,8 +16,10 @@ axis = WIDTH // 2  # разница между блоками 120
 pygame.mixer.pre_init(44100, 16, 2, 4096)
 sound1 = pygame.mixer.Sound('sound6_fon.mp3')
 sound1.set_volume(0.3)
-sound_coin = pygame.mixer.Sound('money.mp3')
+sound_coin = pygame.mixer.Sound('money1.mp3')
 sound_new_level = pygame.mixer.Sound('win.mp3')
+
+sound_d = pygame.mixer.Sound('dead.mp3')
 
 MYEVENTTYPE = pygame.USEREVENT  # для поворачивающихся блоков
 pygame.time.set_timer(MYEVENTTYPE, 1000)
@@ -39,6 +42,9 @@ player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
 player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
 player_l = pygame.transform.flip(player_r, True, False)
 dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
+start_fon = pygame.transform.scale(pygame.image.load('start.png'), (200, 60))
+rule = pygame.transform.scale(pygame.image.load('rules.png'), (200, 60))
+restart = pygame.transform.scale(pygame.image.load('restart.png'), (200, 60))
 
 last_block = 0
 LEVEL = 1
@@ -83,9 +89,6 @@ class Block(pygame.sprite.Sprite):
     tok1_image_l = pygame.transform.scale(pygame.image.load('tok1.png'), (10, 200))
     tok2_image_l = pygame.transform.scale(pygame.image.load('tok2.png'), (10, 200))
     tok3_image_l = pygame.transform.scale(pygame.image.load('tok3.png'), (10, 200))
-    fade1_image = pygame.transform.scale(pygame.image.load('crash_block_1.png'), (10, 130))
-    fade2_image = pygame.transform.scale(pygame.image.load('crash_block_2.png'), (10, 130))
-    fade3_image = pygame.transform.scale(pygame.image.load('crash_block_3.png'), (10, 130))
 
     def __init__(self, group):
         super().__init__(group)
@@ -212,7 +215,7 @@ class Block(pygame.sprite.Sprite):
         if count_platforms == turn1 + 2 or count_platforms == turn2 + 2:
             b = 220
         elif count_platforms == turn1 + 1 or count_platforms == turn2 + 1:
-            b = 210
+            b = 220
         if last_block:
             if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
                     last_block.rect.x <= axis and axis == 310):
@@ -265,16 +268,6 @@ class Block(pygame.sprite.Sprite):
                 self.is_tok = False
             else:
                 self.is_tok = True
-        # if self.fade and self.fade_start:
-        #     if not self.count_for_fade:
-        #         self.image = Block.fade1_image
-        #     elif self.count_for_fade == 1:
-        #         self.image = Block.fade2_image
-        #     elif self.count_for_fade == 2:
-        #         self.image = Block.fade3_image
-        #     else:
-        #         self.disappear = True
-        #     self.count_for_fade += 1
 
     def do_tok(self):
         if self.block_length == platform_length:
@@ -320,11 +313,28 @@ class Cat(pygame.sprite.Sprite):
         self.is_fall = False
         self.hurt = False
 
+    def start_move(self, button):
+        if self.player_x > button.rect.x + 200 and self.player_y - 60 < button.rect.y:
+            self.player_y += 0.1
+            self.image = pygame.transform.flip(player_r, False, True)
+        elif self.player_x - 5 <= button.rect.x - 40 and self.player_y > button.rect.y - 30:
+            self.image = player_l
+            self.player_y -= 0.1
+        elif button.rect.x - 5 < self.player_x + 40 < button.rect.x + 240 and self.player_y < button.rect.y:
+            self.player_x += 0.1
+            self.image = player
+        elif button.rect.x - 40 < self.player_x - 5 < button.rect.x + 200 and self.player_y > button.rect.y:
+            self.player_x -= 0.1
+            self.image = pygame.transform.flip(player, True, True)
+
     def update_rect(self):
         self.rect = self.image.get_rect()
 
     def check_fallen(self):  # кот коснулся предела окна
-        return self.player_x > WIDTH or self.player_x < 0 or self.player_y + 40 > HEIGHT
+        a = self.player_x > WIDTH or self.player_x < 0 or self.player_y + 40 > HEIGHT
+        if a and not self.dead and not self.hurt:
+            sound_d.play()
+        return a
 
     def check_fall(self):  # находится в падении
         return self.curr_block.rect[1] + self.curr_block.block_length < self.player_y + 20 and \
@@ -341,6 +351,7 @@ class Cat(pygame.sprite.Sprite):
         if (self.curr_block.is_tok or (self.curr_block.teeth_r and self.player_x >= self.curr_block.rect.x) or (
                 self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)) and not self.hurt and not self.jump:
             self.hurt = True
+            sound_d.play()
             self.is_fall = False
             self.gravity_y = 6
             self.gravity_x = 1
@@ -362,9 +373,6 @@ class Cat(pygame.sprite.Sprite):
                     el.start_flag = True
                     screen_LEVEL += 1
                     sound_new_level.play()
-            # if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.fade:
-            #     pygame.time.set_timer(MYEVENTTYPE2, 500)
-            #     el.fade_start = True
             if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and \
                     (not self.curr_block.teeth or (
                             self.curr_block.teeth_r and self.player_x < self.curr_block.rect.x) or
@@ -383,6 +391,7 @@ class Cat(pygame.sprite.Sprite):
                 self.curr_block = el
                 self.is_fall = False
                 self.hurt = True
+                sound_d.play()
                 self.gravity_y = 6
                 self.gravity_x = 1
 
@@ -390,7 +399,7 @@ class Cat(pygame.sprite.Sprite):
         for el in all_moneys:
             if el.rect.colliderect([self.player_x, self.player_y, 40, 40]):
                 el.hide()
-                sound_coin.play()
+                pygame.mixer.Channel(1).play(sound_coin)
 
     def jump_back(self):
         self.player_y -= self.gravity_y
@@ -473,7 +482,9 @@ class Cat(pygame.sprite.Sprite):
 fps = 60
 flip = False
 font = pygame.font.Font('Lilita.ttf', 20)
+font_name = pygame.font.Font('Lilita.ttf', 40)
 timer = pygame.time.Clock()
+fon = pygame.transform.scale(pygame.image.load('fon.jpg'), (WIDTH, HEIGHT))
 
 
 def terminate():
@@ -481,11 +492,14 @@ def terminate():
     sys.exit()
 
 
-def game_over():
-    intro_text = ["All collected coins:", str(count_money), '',
-                  "Count levels:", str(screen_LEVEL), '', ]
-    fon = pygame.transform.scale(pygame.image.load('fon.jpg'), (WIDTH, HEIGHT))
+def rules():
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
     screen.blit((fon), (0, 0))
+    pygame.display.set_caption('cat jump')
+    intro_text = ["left mouse button - short jump,", '',
+                  "right mouse button - long jump,", '',
+                  "two clicks in a row - double jump,", '',
+                  "beware of electricity and anything sharp.", '']
     text_coord = 50
     for line in intro_text:
         string_rendered = font.render(line, 1, pygame.Color('black'))
@@ -495,14 +509,83 @@ def game_over():
         intro_rect.x = 10
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
-
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                start()
-                return
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                return True
+        pygame.display.flip()
+
+
+def text():
+    string_rendered = font_name.render("Game CAT JUMP", 1, pygame.Color('black'))
+    intro_rect = string_rendered.get_rect()
+    intro_rect.top = 10
+    intro_rect.x = 110
+    intro_rect.y = 40
+    screen.blit(string_rendered, intro_rect)
+
+
+def start_game():
+    screen.blit((fon), (0, 0))
+    start_fon_sp = pygame.sprite.Sprite()
+    start_fon_sp.image = start_fon
+    start_fon_sp.rect = pygame.Rect(155, 400, 200, 60)
+    que = pygame.sprite.Sprite()
+    que.image = rule
+    que.rect = pygame.Rect(155, 200, 200, 60)
+    cat1 = Cat()
+    cat1.player_x = 200
+    cat1.player_y = 370
+    cat1.image = player
+
+    while True:
+        screen.blit((fon), (0, 0))
+        text()
+        screen.blit(start_fon_sp.image, (155, 400))
+        screen.blit(que.image, (155, 200))
+        screen.blit(cat1.image, (cat1.player_x, cat1.player_y))
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if start_fon_sp.rect.x <= event.pos[0] <= start_fon_sp.rect.x + 200 and \
+                        start_fon_sp.rect.y <= event.pos[1] <= start_fon_sp.rect.y + 60:
+                    return True
+                elif que.rect.x <= event.pos[0] <= que.rect.x + 200 and \
+                        que.rect.y <= event.pos[1] <= que.rect.y + 60:
+                    rules()
+        cat1.start_move(start_fon_sp)
+        pygame.display.flip()
+
+
+def game_over():
+    rstart = pygame.sprite.Sprite()
+    rstart.image = restart
+    rstart.rect = pygame.Rect(155, 400, 200, 60)
+    screen.blit((fon), (0, 0))
+    screen.blit(rstart.image, (155, 400))
+    intro_text = ["All collected coins:", str(count_money), '',
+                  "Count levels:", str(screen_LEVEL), '', ]
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if rstart.rect.x <= event.pos[0] <= rstart.rect.x + 200 and \
+                        rstart.rect.y <= event.pos[1] <= rstart.rect.y + 60:
+                    start()
+                    return True
         pygame.display.flip()
 
 
@@ -531,6 +614,7 @@ def start():
     first_block.start_flag = True
     for i in range(5):
         Block(all_platforms)
+    return
 
 
 # create screen
@@ -548,7 +632,8 @@ first_block.start_flag = True
 for i in range(5):
     Block(all_platforms)
 
-sound1.play(-1)
+pygame.mixer.Channel(0).play(sound1, loops=-1)
+start_game()
 while running:
     timer.tick(fps)
     screen.blit(background, (0, 0))
@@ -613,10 +698,6 @@ while running:
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 3 and cat.jump:
             cat.jump_2 = True
             cat.gravity_y = -1
-
-    # for el in all_platforms:
-    #     if el.fade and el.disappear:
-    #         all_platforms.remove(el)
 
     cat.check_money()
 
