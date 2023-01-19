@@ -1,28 +1,22 @@
 import pygame
 import random
 import sys
-from PyQt5 import uic
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 
 pygame.init()
-
-# library of game const
-white = (255, 255, 255)
-black = (0, 0, 0)
-gray = (120, 120, 120)
 
 WIDTH = 500
 HEIGHT = 600
 axis = WIDTH // 2  # разница между блоками 120
+background = pygame.transform.scale(pygame.image.load('fon.jpg'), (500, 600))
 
-pygame.mixer.pre_init(44100, 16, 2, 4096)
+pygame.mixer.pre_init(44100, 16, 2, 4096)  # звук
 sound1 = pygame.mixer.Sound('sound6_fon.mp3')
 sound1.set_volume(0.3)
 sound_coin = pygame.mixer.Sound('money1.mp3')
 sound_new_level = pygame.mixer.Sound('win.mp3')
-
 sound_d = pygame.mixer.Sound('dead.mp3')
 
+# константы для платформ
 MYEVENTTYPE = pygame.USEREVENT  # для поворачивающихся блоков
 pygame.time.set_timer(MYEVENTTYPE, 1000)
 MYEVENTTYPE1 = pygame.USEREVENT + 1  # для блоков с током
@@ -34,20 +28,6 @@ platform_width = 10
 all_platforms = pygame.sprite.Group()
 count_platforms = 0
 difficult_platforms_count = 1
-
-all_moneys = pygame.sprite.Group()
-count_money = 0
-platforms_for_money = []
-
-background = pygame.transform.scale(pygame.image.load('fon.jpg'), (500, 600))
-player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
-player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
-player_l = pygame.transform.flip(player_r, True, False)
-dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
-start_fon = pygame.transform.scale(pygame.image.load('start.png'), (200, 60))
-rule = pygame.transform.scale(pygame.image.load('rules.png'), (200, 60))
-restart = pygame.transform.scale(pygame.image.load('restart.png'), (200, 60))
-
 last_block = 0
 LEVEL = 1
 screen_LEVEL = 1
@@ -56,8 +36,22 @@ block_w_tok = []
 turn1 = random.randint(3, 9)
 turn2 = turn1 + 6
 
+# консанты для монет
+all_moneys = pygame.sprite.Group()
+count_money = 0
+platforms_for_money = []
 
-class Money(pygame.sprite.Sprite):
+# картинки
+player = pygame.transform.scale(pygame.image.load('cat.png'), (40, 40))
+player_r = pygame.transform.flip(pygame.transform.rotate(player, 90), True, False)
+player_l = pygame.transform.flip(player_r, True, False)
+dead = pygame.transform.scale(pygame.image.load('died_cat.jpg'), (40, 40))
+start_fon = pygame.transform.scale(pygame.image.load('start.png'), (200, 60))
+rule = pygame.transform.scale(pygame.image.load('rules.png'), (200, 60))
+restart = pygame.transform.scale(pygame.image.load('restart.png'), (200, 60))
+
+
+class Money(pygame.sprite.Sprite):  # монетки
     image = pygame.transform.scale(pygame.image.load('money.png'), (30, 30))
 
     def __init__(self, group, block, direction):
@@ -71,13 +65,14 @@ class Money(pygame.sprite.Sprite):
         random_y = random.randrange(block.rect.y + block.block_length, block.rect.y - 60, -10)
         self.rect.y = random_y
 
-    def hide(self):
+    def hide(self):  # исчезание монет при контакте с игроком
         global count_money
         count_money += 1
         all_moneys.remove(self)
 
 
 class Block(pygame.sprite.Sprite):
+    # картинки для блоков
     image = pygame.transform.scale(pygame.image.load('block.png'), (10, 130))
     image2 = pygame.transform.flip(image, True, False)
     long_image = pygame.transform.scale(pygame.image.load('long_platform.png'), (10, 200))
@@ -108,7 +103,7 @@ class Block(pygame.sprite.Sprite):
         self.a = random.randint(1, 2)
         if count_platforms == turn1 + 1 and last_block.rect.x < axis and axis == 250:  # сдвиг влево
             axis = 190
-        elif count_platforms == turn1 + 1 and last_block.rect.x > axis and axis == 250:
+        elif count_platforms == turn1 + 1 and last_block.rect.x > axis and axis == 250:  # сдвиг вправо
             axis = 310
         elif count_platforms == turn2 + 1:
             axis = 250
@@ -123,25 +118,23 @@ class Block(pygame.sprite.Sprite):
         self.fade = False
         self.rect = pygame.Rect(-10, -10, 0, 0)
         self.get_image()
-        if count_platforms >= 17:
+        if count_platforms >= 17:  # новый уровень, новые константы для уровня
             platforms_for_money = random.sample(range(2, 17), 6)
             turn1 = random.randint(3, 9)
             turn2 = turn1 + 6
             count_platforms = 1
             LEVEL += 1
             if LEVEL == 3:
-                difficult_platforms_count = 2
-            # elif LEVEL == 1:
-            #     difficult_platforms_count = 3
+                difficult_platforms_count = 2  # количество платформ с усложнением
             block_w_teeth0 = random.sample(range(3, 17, 2), difficult_platforms_count)
             block_w_teeth = []
-            for el in block_w_teeth0:
+            for el in block_w_teeth0:  # выбор платформы с зубчиками
                 while el == turn1 or el == turn1 + 1 or el == turn2 or el == turn2 + 1 or el in block_w_teeth:
                     el = random.randrange(3, 17, 2)
                 block_w_teeth.append(el)
             block_w_tok = []
             block_w_tok0 = random.sample(range(3, 17), difficult_platforms_count)
-            for el in block_w_tok0:
+            for el in block_w_tok0:  # выбор платформы с током
                 while el == turn1 + 1 or el == turn2 + 1 or \
                         el in block_w_teeth:
                     el = random.randrange(3, 17)
@@ -152,7 +145,7 @@ class Block(pygame.sprite.Sprite):
             self.rect = self.image.get_rect()
             self.start = True
             self.start_flag = False
-        if LEVEL == 1:
+        if LEVEL == 1:  # платформы с монетками
             platforms_for_money = random.sample(range(2, 17), 6)
         if LEVEL > 1:
             if count_platforms in block_w_tok:
@@ -166,7 +159,7 @@ class Block(pygame.sprite.Sprite):
                         self.is_tok = False
                         self.count_for_tok = 1
                     break
-                if s in block_w_tok:
+                if s in block_w_tok:  # чтобы не повторялись блоки с током
                     block_w_tok.remove(s)
             elif count_platforms in block_w_teeth:
                 s = 0
@@ -174,7 +167,7 @@ class Block(pygame.sprite.Sprite):
                     if el == count_platforms:
                         s = el
                         if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
-                                last_block.rect.x <= axis and axis == 310):
+                                last_block.rect.x <= axis and axis == 310):  # определение оси
                             self.image = Block.teeth_image_l
                             self.teeth_l = True
                         else:
@@ -186,13 +179,6 @@ class Block(pygame.sprite.Sprite):
                     break
                 if s in block_w_teeth:
                     block_w_teeth.remove(s)
-
-        # if count_platforms == 3:
-        #     self.fade = True
-        #     self.count_for_fade = 0
-        #     self.fade_start = False
-        #     self.disappear = False
-
         self.coord()
         self.replace = False
         self.curr = False
@@ -202,7 +188,7 @@ class Block(pygame.sprite.Sprite):
         last_block = self
         self.do_money()
 
-    def do_money(self):
+    def do_money(self):  # генерирование местоположения монеток
         for el in platforms_for_money:
             if count_platforms == el:
                 if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
@@ -212,7 +198,7 @@ class Block(pygame.sprite.Sprite):
                     direct = 'left'
                 Money(all_moneys, self, direct)
 
-    def coord(self):
+    def coord(self):  # генерирование координат платформ
         b = 0
         if count_platforms == turn1 + 2 or count_platforms == turn2 + 2:
             b = 220
@@ -239,7 +225,7 @@ class Block(pygame.sprite.Sprite):
                 self.rect.x = axis - 60
                 self.rect.y = last_block.rect.y - b
 
-    def get_image(self):
+    def get_image(self):  # генерирование картинки блока
         if last_block:
             if (last_block.rect.x < axis and (axis == 250 or axis == 190)) or (
                     last_block.rect.x <= axis and axis == 310):
@@ -263,7 +249,7 @@ class Block(pygame.sprite.Sprite):
         else:
             self.block_length = platform_length
 
-    def update(self):
+    def update(self):  # обновление для платформ с электричеством
         if self.tok:
             if self.is_tok:
                 self.image = self.image0
@@ -271,7 +257,7 @@ class Block(pygame.sprite.Sprite):
             else:
                 self.is_tok = True
 
-    def do_tok(self):
+    def do_tok(self):  # смена картинок для электричества
         if self.block_length == platform_length:
             if self.count_for_tok == 1:
                 self.image = Block.tok2_image
@@ -315,7 +301,7 @@ class Cat(pygame.sprite.Sprite):
         self.is_fall = False
         self.hurt = False
 
-    def start_move(self, button):
+    def start_move(self, button):  # движение кота на заставке
         if self.player_x > button.rect.x + 200 and self.player_y - 60 < button.rect.y:
             self.player_y += 0.1
             self.image = pygame.transform.flip(player_r, False, True)
@@ -342,7 +328,7 @@ class Cat(pygame.sprite.Sprite):
         return self.curr_block.rect[1] + self.curr_block.block_length < self.player_y + 20 and \
                (self.curr_block.rect[0] == self.player_x + 40 or self.curr_block.rect[0] == self.player_x - 10)
 
-    def check_slip(self):
+    def check_slip(self):  # проверка на скольжение
         if (self.curr_block.rect.colliderect([self.player_x + 10, self.player_y, 40, 40]) or
             self.curr_block.rect.colliderect([self.player_x - 10, self.player_y, 40,
                                               40])) and not self.curr_block.start and not self.jump and \
@@ -351,13 +337,12 @@ class Cat(pygame.sprite.Sprite):
                 self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)):
             return True
         if (self.curr_block.is_tok or (self.curr_block.teeth_r and self.player_x >= self.curr_block.rect.x) or (
-                self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)) and not self.hurt and not self.jump:
+                self.curr_block.teeth_l and self.player_x < self.curr_block.rect.x)) and not self.hurt and not self.jump:  # если на не обычной платформе
             self.hurt = True
             sound_d.play()
             self.is_fall = False
             self.gravity_y = 6
             self.gravity_x = 1
-
         return False
 
     def current_block(self):  # текущая платформа
@@ -367,7 +352,7 @@ class Cat(pygame.sprite.Sprite):
             if el.rect.colliderect([self.player_x - 10, self.player_y, 40, 40]):
                 return el
 
-    def check_collisions(self):
+    def check_collisions(self):  # проверка пересечения с платформой
         global screen_LEVEL
         for el in all_platforms:
             if el.rect.colliderect([self.player_x, self.player_y, 40, 40]) and el.start:
@@ -397,13 +382,13 @@ class Cat(pygame.sprite.Sprite):
                 self.gravity_y = 6
                 self.gravity_x = 1
 
-    def check_money(self):
+    def check_money(self):  # пересечение с монеткой
         for el in all_moneys:
             if el.rect.colliderect([self.player_x, self.player_y, 40, 40]):
                 el.hide()
                 pygame.mixer.Channel(1).play(sound_coin)
 
-    def jump_back(self):
+    def jump_back(self):  # отскок назад при ранении
         self.player_y -= self.gravity_y
         if self.curr_block.rect[0] > self.player_x:
             self.player_x -= self.gravity_x
@@ -411,8 +396,8 @@ class Cat(pygame.sprite.Sprite):
             self.player_x += self.gravity_x
         self.gravity_y += 0.2
 
-    def one_click(self):
-        if self.jump_counter == 1 and not self.check_2_jump:
+    def one_click(self):  # короткий прыжок
+        if self.jump_counter == 1 and not self.check_2_jump:  # если уже был прыжок (для двойного)
             self.gravity_y = 10
             self.gravity_x = -self.gravity_x
             self.check_2_jump = True
@@ -424,7 +409,7 @@ class Cat(pygame.sprite.Sprite):
                 self.player_x += self.gravity_x
             self.gravity_y -= 1
 
-    def two_click(self):
+    def two_click(self):  # длинный прыжок
         if self.jump_counter == 1 and not self.check_2_jump:
             self.gravity_y = 14
             self.gravity_x = -self.gravity_x
@@ -438,14 +423,14 @@ class Cat(pygame.sprite.Sprite):
                     self.player_x += self.gravity_x
             self.gravity_y -= 1
 
-    def slip(self):
+    def slip(self):  # скольжение
         self.player_y += 0.3
 
-    def fall(self):
+    def fall(self):  # падение
         self.player_y += 2
         return True
 
-    def update_platforms(self):
+    def update_platforms(self):  # обновление координат плафторм
         if self.player_y < 200 and self.gravity_y > 0 and self.jump:
             for el in all_platforms:
                 el.rect.y += self.gravity_y * 1.8
@@ -461,11 +446,11 @@ class Cat(pygame.sprite.Sprite):
         for el in all_platforms:
             if el.tok and el.is_tok:
                 el.do_tok()
-            if el.rect.y + el.block_length > HEIGHT and not el.replace:
+            if el.rect.y + el.block_length > HEIGHT and not el.replace:  # создание новых платформ
                 Block(all_platforms)
                 el.replace = True
 
-    def update_turn(self):
+    def update_turn(self):  # поворачивание платформ
         for el in all_platforms:
             if el.turn:
                 el.image = pygame.transform.flip(el.image, True, False)
@@ -475,7 +460,7 @@ class Cat(pygame.sprite.Sprite):
             else:
                 self.player_x = self.curr_block.rect.x - 40
 
-    def clear_platforms(self):
+    def clear_platforms(self):  # очистка старых платформ
         for el in all_platforms:
             if el.rect.x >= WIDTH or el.rect.x < 0 or el.rect.y >= HEIGHT:
                 all_platforms.remove(el)
@@ -494,7 +479,7 @@ def terminate():
     sys.exit()
 
 
-def rules():
+def rules():  # правила игры
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     screen.blit((fon), (0, 0))
     pygame.display.set_caption('cat jump')
@@ -541,7 +526,7 @@ def text2(text):
         screen.blit(string_rendered, intro_rect)
 
 
-def start_game():
+def start_game():  # начало игры
     screen.blit((fon), (0, 0))
     start_fon_sp = pygame.sprite.Sprite()
     start_fon_sp.image = start_fon
@@ -563,7 +548,7 @@ def start_game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN:  # попадание на кнопку
                 if start_fon_sp.rect.x <= event.pos[0] <= start_fon_sp.rect.x + 200 and \
                         start_fon_sp.rect.y <= event.pos[1] <= start_fon_sp.rect.y + 60:
                     return True
@@ -574,7 +559,7 @@ def start_game():
         pygame.display.flip()
 
 
-def game_over():
+def game_over():  # запись рекорда в файл
     f = open("result.txt", encoding='utf8')
     res = f.readlines()
     record = res[0]
@@ -610,7 +595,7 @@ def game_over():
         timer.tick(30)
 
 
-def start():
+def start():  # обновление констант пр новой игре
     global cat, running, first_block, last_block, first_block, all_platforms, count_platforms, \
         difficult_platforms_count, all_moneys, count_money, platforms_for_money, LEVEL, screen_LEVEL, block_w_teeth, \
         block_w_tok, turn2, turn1, axis, screen
@@ -638,7 +623,6 @@ def start():
     return
 
 
-# create screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('cat jump')
 cat = Cat()
@@ -668,6 +652,7 @@ while running:
     text_level_y = HEIGHT - 30
     screen.blit(text, (text_x, text_y))
     screen.blit(text_level, (text_level_x, text_level_y))
+    # проверка на картинку кота
     if cat.check_fallen():
         cat.jump = False
         cat.dead = True
@@ -722,28 +707,29 @@ while running:
 
     cat.check_money()
 
-    if cat.check_collisions() and not cat.hurt:
+    if cat.check_collisions() and not cat.hurt:  # пересечение с блоком
         cat.jump = False
         cat.jump_1 = False
         cat.jump_2 = False
         cat.is_slip = True
         cat.is_fall = False
 
-    if cat.hurt and not cat.is_fall and not cat.dead:
+    if cat.hurt and not cat.is_fall and not cat.dead:  # получение ранения
         cat.jump_back()
         cat.gravity_y -= 1
 
-    if cat.check_fall() and not cat.dead:
+    if cat.check_fall() and not cat.dead:  # падение
         cat.is_fall = True
         cat.fall()
         cat.jump = False
 
-    if cat.check_slip() and not cat.dead:
+    if cat.check_slip() and not cat.dead:  # скольжение
         cat.is_slip = True
         cat.slip()
     else:
         cat.is_slip = False
 
+    # прыжки
     if cat.jump_1 and not cat.check_collisions() and not cat.check_fallen() and not cat.check_fall() and not cat.hurt:
         cat.jump = True
         cat.one_click()
