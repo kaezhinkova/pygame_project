@@ -479,6 +479,47 @@ timer = pygame.time.Clock()
 def terminate():
     pygame.quit()
     sys.exit()
+def button(screen, position, text, size, colors="white"):
+    bg = colors
+    font = pygame.font.SysFont('Lilita.ttf', size)
+    text_render = font.render(text, 1, bg)
+    x, y, w , h = text_render.get_rect()
+    x, y = position
+    return screen.blit(text_render, (x, y))
+
+
+def start_screen():
+    fon = pygame.transform.scale(pygame.image.load('fon.jpg'), (WIDTH, HEIGHT))
+    screen.blit((fon), (0, 0))
+    b2 = button(screen, (200, 250), "Start", 60, "black")
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if b2.collidepoint(pygame.mouse.get_pos()):
+                    return start()
+        pygame.display.update()
+        timer.tick(fps)
+
+
+def pause():
+    p = True
+    while p:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+        if pygame.key.get_pressed()[pygame.K_RETURN]:
+            p = False
+        pygame.display.update()
+
+
+#def print_text(message, x, y, font_color='black', font_type='Lilita.ttf', font_size=30):
+    #font_type = pygame.font.Font(font_type, font_size)
+    #text = font_type.render(message, False, font_color)
+    #background.blit(text, (x, y))
 
 
 def game_over():
@@ -546,9 +587,10 @@ last_block = first_block
 first_block.start = True
 first_block.start_flag = True
 for i in range(5):
-    Block(all_platforms)
+  Block(all_platforms)
 
 sound1.play(-1)
+start_screen()
 while running:
     timer.tick(fps)
     screen.blit(background, (0, 0))
@@ -579,6 +621,8 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if pygame.key.get_pressed()[pygame.K_SPACE]:
+            pause()
         if event.type == MYEVENTTYPE:
             if not cat.dead:
                 cat.update_turn()
